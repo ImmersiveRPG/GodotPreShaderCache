@@ -7,11 +7,14 @@ extends Node
 signal on_each(file_name, geometry_instance, resource_type)
 signal on_done()
 
-const sleep_time := 5
+const delay_time_on_each := 5
+const delay_time_on_done := 5000
+
 var _is_running := false
 var _thread : Thread
 var _is_logging := false
 var _shader_cache := []
+var _prev_shader_compilation_mode := 0
 
 var _counter_mutex := Mutex.new()
 var _counter := 1
@@ -26,15 +29,35 @@ func _exit_tree() -> void:
 
 	_shader_cache.clear()
 
-func start() -> void:
-	_thread = Thread.new()
-	var err = _thread.start(self, "_run_thread", 0, Thread.PRIORITY_LOW)
-	assert(err == OK)
-
 func send_next() -> void:
 	_counter_mutex.lock()
 	_counter += 1
 	_counter_mutex.unlock()
+
+func start(scene : Node, on_each : String, on_done : String) -> void:
+	# Connect callbacks
+	var err := OK
+	err = self.connect("on_each", scene, on_each)
+	assert(err == OK)
+	err = self.connect("on_done", scene, on_done)
+	assert(err == OK)
+
+	# Temporarily change shader compilation mode to synchronous
+	_prev_shader_compilation_mode = ProjectSettings.get_setting("rendering/gles3/shaders/shader_compilation_mode") as int
+	ProjectSettings.set_setting("rendering/gles3/shaders/shader_compilation_mode", 0)
+
+	# Start thread
+	_thread = Thread.new()
+	err = _thread.start(self, "_run_thread", 0, Thread.PRIORITY_LOW)
+	assert(err == OK)
+
+func stop(scene : Node, on_each : String, on_done : String) -> void:
+	# Reset shader compilation mode to previous
+	ProjectSettings.set_setting("rendering/gles3/shaders/shader_compilation_mode", _prev_shader_compilation_mode)
+
+	# Disconnect callbacks
+	self.disconnect("on_each", scene, on_each)
+	self.disconnect("on_done", scene, on_done)
 
 func _run_thread(_arg : int) -> void:
 	_is_running = true
@@ -57,7 +80,7 @@ func _run_thread(_arg : int) -> void:
 		var is_empty := _counter < 1
 		_counter_mutex.unlock()
 		if is_empty:
-			OS.delay_msec(5)
+			OS.delay_msec(delay_time_on_each)
 			continue
 
 		var entry = materials.pop_front()
@@ -67,7 +90,7 @@ func _run_thread(_arg : int) -> void:
 		_counter_mutex.unlock()
 		self.call_deferred("emit_signal", "on_each", entry.file_name, entry.geometry_instance, entry.resource_type)
 
-	OS.delay_msec(5000)
+	OS.delay_msec(delay_time_on_done)
 	self.call_deferred("emit_signal", "on_done")
 	_is_running = false
 
