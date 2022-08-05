@@ -63,8 +63,12 @@ func _run_thread(_arg : int) -> void:
 	_is_running = true
 	var materials := []
 
+	# Warn of materials inside scenes that can't be cached
+	for file_name in self._get_res_file_list(["tscn"]):
+		self._warn_un_cacheable_sub_resource_materials(file_name)
+
 	# Cache all the materials
-	for file_name in self._get_resource_file_list():
+	for file_name in self._get_res_file_list(["tres"]):
 		var resource_type = self._get_resource_type(file_name)
 		match resource_type:
 			ShaderMaterial, SpatialMaterial, ParticlesMaterial:
@@ -143,6 +147,15 @@ func _cache_resource_material(resource : String, resource_type : GDScriptNativeC
 			return particles
 	return null
 
+func _warn_un_cacheable_sub_resource_materials(file_name : String) -> void:
+	var headers = self._parse_resource_file_section_header(file_name, "sub_resource")
+	for header in headers:
+		for entry in header:
+			var type = header[entry].lstrip("\"").rstrip("\"")
+			match type:
+				"ParticlesMaterial", "SpatialMaterial", "ShaderMaterial":
+					push_warning("ShaderCache: scene '%s' sub resource %s can't be pre cached, unless saved in own *.tres file." % [file_name, type])
+
 func _get_resource_type(file_name : String) -> GDScriptNativeClass:
 	var f := File.new()
 	f.open(file_name, File.READ)
@@ -153,7 +166,7 @@ func _get_resource_type(file_name : String) -> GDScriptNativeClass:
 	for line in text.split("\n"):
 		line = line.rstrip("\r")
 		if line.find("[gd_resource") == 0 and line.find("]") == line.length()-1:
-			line = line.substr("[gd_resource".length(), line.length()-2).lstrip(" ").rstrip(" ")
+			line = line.substr("[gd_resource".length(), line.length()-2).strip_edges()
 			#print("!!! line ", line)
 			var entries = line.split(" ")
 			for entry in entries:
@@ -179,7 +192,30 @@ func _get_resource_type(file_name : String) -> GDScriptNativeClass:
 
 	return null
 
-func _get_resource_file_list() -> Array:
+func _parse_resource_file_section_header(file_name : String, section_name : String) -> Array:
+	var f := File.new()
+	f.open(file_name, File.READ)
+	var text := f.get_as_text()
+	f.close()
+
+	#print(file_name)
+	var headers := []
+	for line in text.split("\n"):
+		line = line.rstrip("\r")
+		var section_start := "[%s" % [section_name]
+		if line.find(section_start) == 0 and line.find("]") == line.length()-1:
+			line = line.substr(section_start.length(), line.length()-2).strip_edges()
+			var entries = line.split(" ")
+			var header := {}
+			for entry in entries:
+				var pair = entry.split("=")
+				header[pair[0]] = pair[1]
+				#print(pair)
+			headers.append(header)
+	#print("============================")
+	return headers
+
+func _get_res_file_list(extensions : Array) -> Array:
 	var resources := []
 
 	# Get all the resource files in the project
@@ -204,7 +240,7 @@ func _get_resource_file_list() -> Array:
 			else:
 				if entry != "":
 					#print("    ", full_entry)
-					if full_entry.get_extension() == "tres":
+					if extensions.has(full_entry.get_extension()):
 						resources.append(full_entry)
 
 			if entry == "":
