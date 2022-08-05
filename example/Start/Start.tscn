@@ -1,0 +1,14 @@
+[gd_scene load_steps=2 format=2]
+
+[ext_resource path="res://example/Floor/Floor.tscn" type="PackedScene" id=1]
+
+[node name="Start" type="Spatial"]
+
+[node name="Camera" type="Camera" parent="."]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6, 9 )
+
+[node name="DirectionalLight" type="DirectionalLight" parent="."]
+transform = Transform( -4.37114e-08, -0.5, 0.866025, 0, 0.866025, 0.5, -1, 2.18557e-08, -3.78552e-08, 0, 20, 0 )
+shadow_enabled = true
+
+[node name="Floor" parent="." instance=ExtResource( 1 )]

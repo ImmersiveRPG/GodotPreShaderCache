@@ -1,0 +1,13 @@
+[gd_scene load_steps=2 format=2]
+
+[ext_resource path="res://example/Load/Load.gd" type="Script" id=1]
+
+[node name="Load" type="Spatial"]
+script = ExtResource( 1 )
+
+[node name="DirectionalLight" type="DirectionalLight" parent="."]
+transform = Transform( -3.09086e-08, -0.707107, 0.707107, -3.09086e-08, 0.707107, 0.707107, -1, 0, -4.37114e-08, 0, 11, 0 )
+shadow_enabled = true
+
+[node name="Camera" type="Camera" parent="."]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 13 )
