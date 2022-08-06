@@ -4,7 +4,7 @@
 
 extends Node
 
-signal on_each(file_name, geometry_instance, resource_type)
+signal on_each(percent, file_name, geometry_instance, resource_type)
 signal on_done()
 
 var _delay_msec_on_each := 5
@@ -66,6 +66,7 @@ func _run_thread(_arg : int) -> void:
 	_is_running = true
 	var materials := []
 
+	var total := 0
 	var resource_files := self._get_res_file_list(["tscn", "tres"])
 	for file_name in resource_files:
 		match file_name.get_extension().to_lower():
@@ -80,10 +81,12 @@ func _run_thread(_arg : int) -> void:
 						var geometry_instance = self._cache_resource_material(file_name, resource_type)
 						if geometry_instance:
 							materials.append({ "file_name" : file_name, "geometry_instance" : geometry_instance, "resource_type" : resource_type })
+							total += 1
 					_:
 						if _is_logging: print("##### Skipping caching: ", file_name)
 
 	# Send all the cached materials to the scene
+	var i := 0
 	while not materials.empty():
 		_counter_mutex.lock()
 		var is_empty := _counter < 1
@@ -97,7 +100,10 @@ func _run_thread(_arg : int) -> void:
 		_counter_mutex.lock()
 		_counter -= 1
 		_counter_mutex.unlock()
-		self.call_deferred("emit_signal", "on_each", entry.file_name, entry.geometry_instance, entry.resource_type)
+
+		i += 1
+		var percent := i / float(total)
+		self.call_deferred("emit_signal", "on_each", percent, entry.file_name, entry.geometry_instance, entry.resource_type)
 
 	OS.delay_msec(_delay_msec_on_done)
 	self.call_deferred("emit_signal", "on_done")

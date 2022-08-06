@@ -8,7 +8,7 @@ extends Spatial
 var _offset := Vector3.ZERO
 
 func _ready() -> void:
-	ShaderCache.start(self, "_on_each", "_on_done", 10, 3000)
+	ShaderCache.start(self, "_on_each", "_on_done", 100, 3000)
 
 func _process(delta : float) -> void:
 	# Rotate each cube
@@ -16,7 +16,7 @@ func _process(delta : float) -> void:
 		if child is MeshInstance:
 			child.rotation.x += delta * deg2rad(60.0)
 
-func _on_each(file_name : String, mesh : GeometryInstance, resource_type : GDScriptNativeClass) -> void:
+func _on_each(percent : float, file_name : String, mesh : GeometryInstance, resource_type : GDScriptNativeClass) -> void:
 	# Add the mesh to the scene
 	self.add_child(mesh)
 	mesh.transform.origin = _offset
@@ -36,6 +36,7 @@ func _on_each(file_name : String, mesh : GeometryInstance, resource_type : GDScr
 		ParticlesMaterial:
 			print("Cached particle material: %s" % [file_name])
 
+	$LoadingProgressBar.value = percent * 100.0
 	ShaderCache.send_next()
 
 func _on_done() -> void:

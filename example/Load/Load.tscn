@@ -11,3 +11,9 @@ shadow_enabled = true
 
 [node name="Camera" type="Camera" parent="."]
 transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 13 )
+
+[node name="LoadingProgressBar" type="ProgressBar" parent="."]
+margin_left = 286.0
+margin_top = 39.0
+margin_right = 735.0
+margin_bottom = 72.0
