@@ -6,6 +6,7 @@ extends Spatial
 
 
 var _offset := Vector3.ZERO
+onready var _progress_bar = $CenterContainer/VBoxContainer/MarginContainer/LoadingProgressBar
 
 func _ready() -> void:
 	ShaderCache.start(self, "_on_each", "_on_done", 100, 3000)
@@ -36,7 +37,7 @@ func _on_each(percent : float, file_name : String, mesh : GeometryInstance, reso
 		ParticlesMaterial:
 			print("Cached particle material: %s" % [file_name])
 
-	$LoadingProgressBar.value = percent * 100.0
+	_progress_bar.value = percent * 100.0
 	ShaderCache.send_next()
 
 func _on_done() -> void:

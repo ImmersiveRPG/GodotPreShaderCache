@@ -10,10 +10,46 @@ transform = Transform( -3.09086e-08, -0.707107, 0.707107, -3.09086e-08, 0.707107
 shadow_enabled = true
 
 [node name="Camera" type="Camera" parent="."]
-transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 13 )
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 13.444, -7.39809, 13 )
 
-[node name="LoadingProgressBar" type="ProgressBar" parent="."]
-margin_left = 286.0
-margin_top = 39.0
-margin_right = 735.0
-margin_bottom = 72.0
+[node name="CenterContainer" type="CenterContainer" parent="."]
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+margin_top = -20.0
+grow_horizontal = 0
+grow_vertical = 0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer"]
+margin_left = 292.0
+margin_right = 732.0
+margin_bottom = 158.0
+
+[node name="Label" type="Label" parent="CenterContainer/VBoxContainer"]
+margin_right = 440.0
+margin_bottom = 14.0
+text = "Loading"
+align = 1
+valign = 1
+
+[node name="MarginContainer" type="MarginContainer" parent="CenterContainer/VBoxContainer"]
+margin_top = 18.0
+margin_right = 440.0
+margin_bottom = 158.0
+grow_horizontal = 0
+grow_vertical = 0
+size_flags_horizontal = 3
+size_flags_vertical = 3
+custom_constants/margin_right = 20
+custom_constants/margin_top = 20
+custom_constants/margin_left = 20
+custom_constants/margin_bottom = 100
+
+[node name="LoadingProgressBar" type="ProgressBar" parent="CenterContainer/VBoxContainer/MarginContainer"]
+margin_left = 20.0
+margin_top = 20.0
+margin_right = 420.0
+margin_bottom = 40.0
+grow_horizontal = 0
+grow_vertical = 0
+rect_min_size = Vector2( 400, 20 )

@@ -7,3 +7,4 @@ A Godot plugin to compile and pre cache shader materials
 * Break ShaderCache into 2 threads to remove stupid spin lock. Keep in same file:
 	* One for caching shader
 	* And another for adding to client when it says it is ready 
+* Change to use viewport 
