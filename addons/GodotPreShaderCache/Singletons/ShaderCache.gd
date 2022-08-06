@@ -66,20 +66,22 @@ func _run_thread(_arg : int) -> void:
 	_is_running = true
 	var materials := []
 
-	# Warn of materials inside scenes that can't be cached
-	for file_name in self._get_res_file_list(["tscn"]):
-		self._warn_un_cacheable_sub_resource_materials(file_name)
-
-	# Cache all the materials
-	for file_name in self._get_res_file_list(["tres"]):
-		var resource_type = self._get_resource_type(file_name)
-		match resource_type:
-			ShaderMaterial, SpatialMaterial, ParticlesMaterial:
-				var geometry_instance = self._cache_resource_material(file_name, resource_type)
-				if geometry_instance:
-					materials.append({ "file_name" : file_name, "geometry_instance" : geometry_instance, "resource_type" : resource_type })
-			_:
-				if _is_logging: print("##### Skipping caching: ", file_name)
+	var resource_files := self._get_res_file_list(["tscn", "tres"])
+	for file_name in resource_files:
+		match file_name.get_extension().to_lower():
+			# Warn of materials inside scenes that can't be cached
+			"tscn":
+				self._warn_un_cacheable_sub_resource_materials(file_name)
+			# Cache all the materials
+			"tres":
+				var resource_type = self._get_resource_type(file_name)
+				match resource_type:
+					ShaderMaterial, SpatialMaterial, ParticlesMaterial:
+						var geometry_instance = self._cache_resource_material(file_name, resource_type)
+						if geometry_instance:
+							materials.append({ "file_name" : file_name, "geometry_instance" : geometry_instance, "resource_type" : resource_type })
+					_:
+						if _is_logging: print("##### Skipping caching: ", file_name)
 
 	# Send all the cached materials to the scene
 	while not materials.empty():
@@ -243,7 +245,7 @@ func _get_res_file_list(extensions : Array) -> Array:
 			else:
 				if entry != "":
 					#print("    ", full_entry)
-					if extensions.has(full_entry.get_extension()):
+					if extensions.has(full_entry.get_extension().to_lower()):
 						resources.append(full_entry)
 
 			if entry == "":
