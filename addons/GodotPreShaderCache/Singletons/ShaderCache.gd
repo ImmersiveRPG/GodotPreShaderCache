@@ -7,8 +7,8 @@ extends Node
 signal on_each(file_name, geometry_instance, resource_type)
 signal on_done()
 
-const delay_time_on_each := 5
-const delay_time_on_done := 5000
+var _delay_msec_on_each := 5
+var _delay_msec_on_done := 5000
 
 var _is_running := false
 var _thread : Thread
@@ -34,7 +34,10 @@ func send_next() -> void:
 	_counter += 1
 	_counter_mutex.unlock()
 
-func start(scene : Node, on_each : String, on_done : String) -> void:
+func start(scene : Node, on_each : String, on_done : String, delay_msec_on_each := 5, delay_msec_on_done := 5000) -> void:
+	_delay_msec_on_each = delay_msec_on_each
+	_delay_msec_on_done = delay_msec_on_done
+
 	# Connect callbacks
 	var err := OK
 	err = self.connect("on_each", scene, on_each)
@@ -84,7 +87,7 @@ func _run_thread(_arg : int) -> void:
 		var is_empty := _counter < 1
 		_counter_mutex.unlock()
 		if is_empty:
-			OS.delay_msec(delay_time_on_each)
+			OS.delay_msec(_delay_msec_on_each)
 			continue
 
 		var entry = materials.pop_front()
@@ -94,7 +97,7 @@ func _run_thread(_arg : int) -> void:
 		_counter_mutex.unlock()
 		self.call_deferred("emit_signal", "on_each", entry.file_name, entry.geometry_instance, entry.resource_type)
 
-	OS.delay_msec(delay_time_on_done)
+	OS.delay_msec(_delay_msec_on_done)
 	self.call_deferred("emit_signal", "on_done")
 	_is_running = false
 

@@ -8,7 +8,7 @@ extends Spatial
 var _offset := Vector3.ZERO
 
 func _ready() -> void:
-	ShaderCache.start(self, "_on_each", "_on_done")
+	ShaderCache.start(self, "_on_each", "_on_done", 10, 3000)
 
 func _process(delta : float) -> void:
 	# Rotate each cube
