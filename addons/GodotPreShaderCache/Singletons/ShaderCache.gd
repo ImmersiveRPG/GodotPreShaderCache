@@ -216,32 +216,19 @@ func _warn_un_cacheable_sub_resource_materials(file_name : String) -> void:
 					push_warning("ShaderCache: scene '%s' sub resource %s can't be pre cached, unless saved in own *.tres file." % [file_name, type])
 
 func _get_resource_type(file_name : String) -> GDScriptNativeClass:
-	var f := File.new()
-	f.open(file_name, File.READ)
-	var text := f.get_as_text()
-	f.close()
-
-	#[gd_resource type="ParticlesMaterial" load_steps=3 format=2]
-	for line in text.split("\n"):
-		line = line.rstrip("\r")
-		if line.find("[gd_resource") == 0 and line.find("]") == line.length()-1:
-			line = line.substr("[gd_resource".length(), line.length()-2).strip_edges()
-			#print("!!! line ", line)
-			var entries = line.split(" ")
-			for entry in entries:
-				#print("    !!! entry ", entry)
-				var pair = entry.split("=")
-				#print(pair)
-				if pair[0] == "type":
-					var value = pair[1].lstrip("\"").rstrip("\"")
-					match value:
-						"ParticlesMaterial": return ParticlesMaterial
-						"ShaderMaterial": return ShaderMaterial
-						"SpatialMaterial": return SpatialMaterial
-						_:
-							return null
+	var headers = self._parse_resource_file_section_header(file_name, "gd_resource")
+	for header in headers:
+		for entry in header:
+			var type = header[entry].lstrip("\"").rstrip("\"")
+			match type:
+				"ParticlesMaterial": return ParticlesMaterial
+				"ShaderMaterial": return ShaderMaterial
+				"SpatialMaterial": return SpatialMaterial
+				_:
+					return null
 
 	return null
+
 
 func _parse_resource_file_section_header(file_name : String, section_name : String) -> Array:
 	var f := File.new()
