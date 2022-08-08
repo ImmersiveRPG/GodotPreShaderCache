@@ -1,0 +1,17 @@
+[gd_resource type="Shader" format=2]
+
+[resource]
+resource_local_to_scene = true
+code = "// Copyright (c) 2021-2022 Matthew Brennan Jones <matthew.brennan.jones@gmail.com>
+// All rights reserved. Proprietary and confidential
+// Unauthorized copying of this file, via any medium is strictly prohibited
+// https://github.com/workhorsy/ImmersiveRPG
+
+shader_type spatial;
+
+uniform vec3 screen_color = vec3(0.0, 0.0, 1.0);
+
+void fragment() {
+	ALBEDO = screen_color;
+}
+"

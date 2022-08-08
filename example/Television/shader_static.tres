@@ -1,0 +1,25 @@
+[gd_resource type="Shader" format=2]
+
+[resource]
+resource_local_to_scene = true
+code = "// Copyright (c) 2021-2022 Matthew Brennan Jones <matthew.brennan.jones@gmail.com>
+// All rights reserved. Proprietary and confidential
+// Unauthorized copying of this file, via any medium is strictly prohibited
+// https://github.com/workhorsy/ImmersiveRPG
+
+shader_type spatial;
+
+// Classic GLSL pseudo random number generator
+float rand(vec2 uv) {
+	return fract(sin(dot(uv.xy, vec2(12.9898,78.233))) * 43758.5453);
+}
+
+void fragment() {
+	const vec2 resolution = vec2(320.0, 240.0);
+	float x = round(UV.x * resolution.x);
+	float y = round(UV.y * resolution.y);
+
+	float c = rand(vec2(x + TIME, y + TIME));
+	ALBEDO = vec3(c, c, c);
+}
+"
