@@ -10,29 +10,41 @@ signal on_done()
 var _delay_msec_on_each := 5
 var _delay_msec_on_done := 5000
 
+var _is_running_mutex := Mutex.new()
 var _is_running := false
-var _thread : Thread
+
 var _is_logging := false
 var _shader_cache := []
 var _prev_shader_compilation_mode := 0
 
-var _counter_mutex := Mutex.new()
-var _counter := 1
+var _materials_mutex := Mutex.new()
+var _materials := []
+
+var _ready_counter_mutex := Mutex.new()
+var _ready_counter := 1
+
+var _total_to_cache := 0
+var _thread_cache_shaders : Thread
+var _thread_fire_callbacks : Thread
 
 func _exit_tree() -> void:
-	if _is_running:
-		_is_running = false
-
-	if _thread:
-		_thread.wait_to_finish()
-		_thread = null
-
 	_shader_cache.clear()
 
+func _get_is_running() -> bool:
+	_is_running_mutex.lock()
+	var is_running := _is_running
+	_is_running_mutex.unlock()
+	return is_running
+
+func _set_is_running(value : bool) -> void:
+	_is_running_mutex.lock()
+	_is_running = value
+	_is_running_mutex.unlock()
+
 func send_next() -> void:
-	_counter_mutex.lock()
-	_counter += 1
-	_counter_mutex.unlock()
+	_ready_counter_mutex.lock()
+	_ready_counter += 1
+	_ready_counter_mutex.unlock()
 
 func start(scene : Node, on_each : String, on_done : String, delay_msec_on_each := 5, delay_msec_on_done := 5000) -> void:
 	_delay_msec_on_each = delay_msec_on_each
@@ -49,12 +61,35 @@ func start(scene : Node, on_each : String, on_done : String, delay_msec_on_each 
 	_prev_shader_compilation_mode = ProjectSettings.get_setting("rendering/gles3/shaders/shader_compilation_mode") as int
 	ProjectSettings.set_setting("rendering/gles3/shaders/shader_compilation_mode", 0)
 
-	# Start thread
-	_thread = Thread.new()
-	err = _thread.start(self, "_run_thread", 0, Thread.PRIORITY_LOW)
+	# Get total number of shaders we will cache
+	var shader_types := [ShaderMaterial, SpatialMaterial, ParticlesMaterial]
+	for file_name in self._get_res_file_list(["tres"]):
+		var resource_type = self._get_resource_type(file_name)
+		if shader_types.has(resource_type):
+			_total_to_cache += 1
+
+	# Start threads
+	self._set_is_running(true)
+	_thread_cache_shaders = Thread.new()
+	err = _thread_cache_shaders.start(self, "_run_thread_cache_shaders", 0, Thread.PRIORITY_LOW)
+	assert(err == OK)
+
+	_thread_fire_callbacks = Thread.new()
+	err = _thread_fire_callbacks.start(self, "_run_thread_fire_callbacks", 0, Thread.PRIORITY_LOW)
 	assert(err == OK)
 
 func stop(scene : Node, on_each : String, on_done : String) -> void:
+	if self._get_is_running():
+		self._set_is_running(false)
+
+	if _thread_cache_shaders:
+		_thread_cache_shaders.wait_to_finish()
+		_thread_cache_shaders = null
+
+	if _thread_fire_callbacks:
+		_thread_fire_callbacks.wait_to_finish()
+		_thread_fire_callbacks = null
+
 	# Reset shader compilation mode to previous
 	ProjectSettings.set_setting("rendering/gles3/shaders/shader_compilation_mode", _prev_shader_compilation_mode)
 
@@ -62,13 +97,11 @@ func stop(scene : Node, on_each : String, on_done : String) -> void:
 	self.disconnect("on_each", scene, on_each)
 	self.disconnect("on_done", scene, on_done)
 
-func _run_thread(_arg : int) -> void:
-	_is_running = true
-	var materials := []
-
-	var total := 0
+func _run_thread_cache_shaders(_arg : int) -> void:
 	var resource_files := self._get_res_file_list(["tscn", "tres"])
-	for file_name in resource_files:
+
+	while self._get_is_running() and not resource_files.empty():
+		var file_name = resource_files.pop_front()
 		match file_name.get_extension().to_lower():
 			# Warn of materials inside scenes that can't be cached
 			"tscn":
@@ -80,34 +113,47 @@ func _run_thread(_arg : int) -> void:
 					ShaderMaterial, SpatialMaterial, ParticlesMaterial:
 						var geometry_instance = self._cache_resource_material(file_name, resource_type)
 						if geometry_instance:
-							materials.append({ "file_name" : file_name, "geometry_instance" : geometry_instance, "resource_type" : resource_type })
-							total += 1
+							_materials.append({ "file_name" : file_name, "geometry_instance" : geometry_instance, "resource_type" : resource_type })
 					_:
 						if _is_logging: print("##### Skipping caching: ", file_name)
 
-	# Send all the cached materials to the scene
+
+func _run_thread_fire_callbacks(_arg : int) -> void:
 	var i := 0
-	while not materials.empty():
-		_counter_mutex.lock()
-		var is_empty := _counter < 1
-		_counter_mutex.unlock()
-		if is_empty:
-			OS.delay_msec(_delay_msec_on_each)
+	while self._get_is_running():
+		# Check if app is ready to fire next callback
+		_ready_counter_mutex.lock()
+		var is_ready := _ready_counter > 0
+		_ready_counter_mutex.unlock()
+
+		# Check if there are more materials to send to app
+		_materials_mutex.lock()
+		var is_empty := _materials.empty()
+		_materials_mutex.unlock()
+
+		# Just wait if app is not ready
+		if not is_ready or is_empty:
+			OS.delay_msec(10)
 			continue
 
-		var entry = materials.pop_front()
-		#print("Cached: %s" % entry.file_name.split('/')[-1])
-		_counter_mutex.lock()
-		_counter -= 1
-		_counter_mutex.unlock()
+		if not is_empty:
+			_materials_mutex.lock()
+			var entry = _materials.pop_front()
+			_materials_mutex.unlock()
 
-		i += 1
-		var percent := i / float(total)
-		self.call_deferred("emit_signal", "on_each", percent, entry.file_name, entry.geometry_instance, entry.resource_type)
+			_ready_counter_mutex.lock()
+			_ready_counter -= 1
+			_ready_counter_mutex.unlock()
 
-	OS.delay_msec(_delay_msec_on_done)
-	self.call_deferred("emit_signal", "on_done")
-	_is_running = false
+			i += 1
+			var percent := i / float(_total_to_cache)
+			OS.delay_msec(_delay_msec_on_each)
+			self.call_deferred("emit_signal", "on_each", percent, entry.file_name, entry.geometry_instance, entry.resource_type)
+
+			if i == _total_to_cache:
+				self._set_is_running(false)
+				OS.delay_msec(_delay_msec_on_done)
+				self.call_deferred("emit_signal", "on_done")
 
 func _cache_resource_material(resource : String, resource_type : GDScriptNativeClass) -> GeometryInstance:
 	var start_time := 0.0

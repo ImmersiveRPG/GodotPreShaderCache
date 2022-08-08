@@ -10,7 +10,7 @@ transform = Transform( -3.09086e-08, -0.707107, 0.707107, -3.09086e-08, 0.707107
 shadow_enabled = true
 
 [node name="Camera" type="Camera" parent="."]
-transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 13.444, -7.39809, 13 )
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 10, -5, 9 )
 
 [node name="CenterContainer" type="CenterContainer" parent="."]
 anchor_top = 1.0
