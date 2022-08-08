@@ -1,7 +1,6 @@
-# Copyright (c) 2021-2022 Matthew Brennan Jones <matthew.brennan.jones@gmail.com>
-# All rights reserved. Proprietary and confidential
-# Unauthorized copying of this file, via any medium is strictly prohibited
-# https://github.com/workhorsy/ImmersiveRPG
+# Copyright (c) 2022 Matthew Brennan Jones <matthew.brennan.jones@gmail.com>
+# This file is licensed under the MIT License
+# https://github.com/ImmersiveRPG/GodotPreShaderCache
 
 extends StaticBody
 
