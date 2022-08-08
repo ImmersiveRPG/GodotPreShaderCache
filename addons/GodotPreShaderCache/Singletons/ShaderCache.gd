@@ -235,18 +235,10 @@ func _get_resource_type(file_name : String) -> GDScriptNativeClass:
 				if pair[0] == "type":
 					var value = pair[1].lstrip("\"").rstrip("\"")
 					match value:
-						"Environment": return Environment
-						"ButtonGroup": return ButtonGroup
-						"CapsuleMesh": return CapsuleMesh
-						"CubeMesh": return CubeMesh
-						"Gradient": return Gradient
 						"ParticlesMaterial": return ParticlesMaterial
-						"PrismMesh": return PrismMesh
-						"Shader": return Shader
 						"ShaderMaterial": return ShaderMaterial
 						"SpatialMaterial": return SpatialMaterial
 						_:
-							push_warning("Unexpected resource type: %s" % [value])
 							return null
 
 	return null
