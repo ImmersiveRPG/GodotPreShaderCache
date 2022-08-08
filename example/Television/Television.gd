@@ -12,8 +12,6 @@ onready var _omni_light = $BackLight/OmniLight
 onready var _spot_light = $BackLight/SpotLight
 
 var _normal_shader = null
-var _is_nuked := false
-signal nuke(nuke_origin)
 
 func _ready() -> void:
 	self._on_Timer_timeout()

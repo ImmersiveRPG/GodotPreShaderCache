@@ -1,0 +1,5 @@
+[gd_resource type="ParticlesMaterial" format=2]
+
+[resource]
+initial_velocity = 15.5
+angular_velocity = 25.0

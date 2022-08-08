@@ -1,0 +1,11 @@
+[gd_scene load_steps=3 format=2]
+
+[ext_resource path="res://example/Spray/draw_spatial_material.tres" type="CubeMesh" id=1]
+[ext_resource path="res://example/Spray/process_particles_material.tres" type="Material" id=2]
+
+[node name="Spray" type="Particles"]
+transform = Transform( -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, 0, 1, -6, 2, -9 )
+amount = 64
+lifetime = 3.0
+process_material = ExtResource( 2 )
+draw_pass_1 = ExtResource( 1 )

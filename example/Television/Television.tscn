@@ -90,5 +90,4 @@ process_mode = 0
 wait_time = 10.0
 autostart = true
 
-[connection signal="nuke" from="." to="." method="_on_nuke"]
 [connection signal="timeout" from="Timer" to="." method="_on_Timer_timeout"]
