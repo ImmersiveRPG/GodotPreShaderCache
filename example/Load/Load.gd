@@ -9,7 +9,10 @@ var _offset := Vector3.ZERO
 onready var _progress_bar = $CenterContainer/VBoxContainer/MarginContainer/LoadingProgressBar
 
 func _ready() -> void:
-	ShaderCache.start(self, "_on_each", "_on_done", 100, 3000)
+	var paths_to_ignore := [
+		"res:///addons/"
+	]
+	ShaderCache.start(self, "_on_each", "_on_done", paths_to_ignore, 20, 3000)
 
 func _process(delta : float) -> void:
 	# Rotate each cube

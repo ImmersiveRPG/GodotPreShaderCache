@@ -14,6 +14,7 @@ var _is_running_mutex := Mutex.new()
 var _is_running := false
 
 var _is_logging := false
+var _resource_files := []
 var _shader_cache := []
 var _prev_shader_compilation_mode := 0
 
@@ -46,7 +47,7 @@ func send_next() -> void:
 	_ready_counter += 1
 	_ready_counter_mutex.unlock()
 
-func start(scene : Node, on_each : String, on_done : String, delay_msec_on_each := 5, delay_msec_on_done := 5000) -> void:
+func start(scene : Node, on_each : String, on_done : String, paths_to_ignore := [], delay_msec_on_each := 5, delay_msec_on_done := 5000) -> void:
 	_delay_msec_on_each = delay_msec_on_each
 	_delay_msec_on_done = delay_msec_on_done
 
@@ -61,12 +62,15 @@ func start(scene : Node, on_each : String, on_done : String, delay_msec_on_each 
 	_prev_shader_compilation_mode = ProjectSettings.get_setting("rendering/gles3/shaders/shader_compilation_mode") as int
 	ProjectSettings.set_setting("rendering/gles3/shaders/shader_compilation_mode", 0)
 
+	_resource_files = self._get_res_file_list(["tscn", "tres"], paths_to_ignore)
+
 	# Get total number of shaders we will cache
 	var shader_types := [ShaderMaterial, SpatialMaterial, ParticlesMaterial]
-	for file_name in self._get_res_file_list(["tres"]):
-		var resource_type = self._get_resource_type(file_name)
-		if shader_types.has(resource_type):
-			_total_to_cache += 1
+	for file_name in _resource_files:
+		if file_name.get_extension().to_lower() == "tres":
+			var resource_type = self._get_resource_type(file_name)
+			if shader_types.has(resource_type):
+				_total_to_cache += 1
 
 	# Start threads
 	self._set_is_running(true)
@@ -98,10 +102,8 @@ func stop(scene : Node, on_each : String, on_done : String) -> void:
 	self.disconnect("on_done", scene, on_done)
 
 func _run_thread_cache_shaders(_arg : int) -> void:
-	var resource_files := self._get_res_file_list(["tscn", "tres"])
-
-	while self._get_is_running() and not resource_files.empty():
-		var file_name = resource_files.pop_front()
+	while self._get_is_running() and not _resource_files.empty():
+		var file_name = _resource_files.pop_front()
 		match file_name.get_extension().to_lower():
 			# Warn of materials inside scenes that can't be cached
 			"tscn":
@@ -272,7 +274,7 @@ func _parse_resource_file_section_header(file_name : String, section_name : Stri
 	#print("============================")
 	return headers
 
-func _get_res_file_list(extensions : Array) -> Array:
+func _get_res_file_list(extensions : Array, paths_to_ignore : Array) -> Array:
 	var resources := []
 
 	# Get all the resource files in the project
@@ -295,7 +297,12 @@ func _get_res_file_list(extensions : Array) -> Array:
 					#print("!!!!!! added full_entry \"%s\" \"%s\"..." % [entry, full_entry])
 					to_search.append(full_entry)
 			else:
-				if entry != "":
+				var is_ignored := false
+				for path_to_ignore in paths_to_ignore:
+					if entry == "" or full_entry.begins_with(path_to_ignore):
+						is_ignored = true
+
+				if entry != "" and not is_ignored:
 					#print("    ", full_entry)
 					if extensions.has(full_entry.get_extension().to_lower()):
 						resources.append(full_entry)
