@@ -20,10 +20,14 @@ func _process(delta : float) -> void:
 		if child is MeshInstance:
 			child.rotation.x += delta * deg2rad(60.0)
 
-func _on_each(percent : float, file_name : String, mesh : GeometryInstance, resource_type : GDScriptNativeClass) -> void:
+func _on_each(percent : float, file_name : String, mesh : Node, resource_type : GDScriptNativeClass) -> void:
 	# Add the mesh to the scene
 	self.add_child(mesh)
-	mesh.transform.origin = _offset
+	if "position" in mesh:
+		var pos = $Camera.unproject_position(_offset)
+		mesh.position = Vector2(pos.x, pos.y)
+	else:
+		mesh.transform.origin = _offset
 
 	# Update the offset for the next mesh
 	var size := 0.4
@@ -39,6 +43,9 @@ func _on_each(percent : float, file_name : String, mesh : GeometryInstance, reso
 			print("Cached spatial material: %s" % [file_name])
 		ParticlesMaterial:
 			print("Cached particle material: %s" % [file_name])
+		CanvasItemMaterial:
+			print("Cached canvas item material: %s" % [file_name])
+	#print("Cached: %s" % [file_name])
 
 	_progress_bar.value = percent * 100.0
 	ShaderCache.send_next()

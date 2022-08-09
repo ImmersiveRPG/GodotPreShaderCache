@@ -65,7 +65,7 @@ func start(scene : Node, on_each : String, on_done : String, paths_to_ignore := 
 	_resource_files = self._get_res_file_list(["tscn", "tres"], paths_to_ignore)
 
 	# Get total number of shaders we will cache
-	var shader_types := [ShaderMaterial, SpatialMaterial, ParticlesMaterial]
+	var shader_types := [ShaderMaterial, SpatialMaterial, ParticlesMaterial, CanvasItemMaterial]
 	for file_name in _resource_files:
 		if file_name.get_extension().to_lower() == "tres":
 			var resource_type = self._get_resource_type(file_name)
@@ -112,7 +112,7 @@ func _run_thread_cache_shaders(_arg : int) -> void:
 			"tres":
 				var resource_type = self._get_resource_type(file_name)
 				match resource_type:
-					ShaderMaterial, SpatialMaterial, ParticlesMaterial:
+					ShaderMaterial, SpatialMaterial, ParticlesMaterial, CanvasItemMaterial:
 						var geometry_instance = self._cache_resource_material(file_name, resource_type)
 						if geometry_instance:
 							_materials.append({ "file_name" : file_name, "geometry_instance" : geometry_instance, "resource_type" : resource_type })
@@ -157,14 +157,14 @@ func _run_thread_fire_callbacks(_arg : int) -> void:
 				OS.delay_msec(_delay_msec_on_done)
 				self.call_deferred("emit_signal", "on_done")
 
-func _cache_resource_material(resource : String, resource_type : GDScriptNativeClass) -> GeometryInstance:
+func _cache_resource_material(resource : String, resource_type : GDScriptNativeClass) -> Node:
 	var start_time := 0.0
 	var size := 0.8
 
 	# Load the material resource
 	start_time = OS.get_ticks_msec()
 	var mat := ResourceLoader.load(resource)
-	var is_desired_format := mat is ShaderMaterial or mat is SpatialMaterial or mat is ParticlesMaterial
+	var is_desired_format := mat is ShaderMaterial or mat is SpatialMaterial or mat is ParticlesMaterial or mat is CanvasItemMaterial
 	if not is_desired_format:
 		return null
 
@@ -204,6 +204,20 @@ func _cache_resource_material(resource : String, resource_type : GDScriptNativeC
 
 			_shader_cache.append(mat)
 			return particles
+		CanvasItemMaterial:
+			var mesh_instance := MeshInstance2D.new()
+			var quad_mesh := QuadMesh.new()
+			mesh_instance.scale = Vector2(25, -25)
+			if _is_logging: print("    Creating mesh2d: ", OS.get_ticks_msec() - start_time)
+			start_time = OS.get_ticks_msec()
+
+			mesh_instance.mesh = quad_mesh
+			mesh_instance.material = mat
+			if _is_logging: print("    Setting mesh2d material: ", OS.get_ticks_msec() - start_time)
+			start_time = OS.get_ticks_msec()
+
+			_shader_cache.append(mat)
+			return mesh_instance
 	return null
 
 func _warn_un_cacheable_sub_resource_materials(file_name : String) -> void:
@@ -213,7 +227,7 @@ func _warn_un_cacheable_sub_resource_materials(file_name : String) -> void:
 			if key == "type":
 				var value = header[key].lstrip("\"").rstrip("\"")
 				match value:
-					"ParticlesMaterial", "SpatialMaterial", "ShaderMaterial":
+					"ParticlesMaterial", "SpatialMaterial", "ShaderMaterial", "CanvasItemMaterial":
 						push_warning("ShaderCache: scene '%s' sub resource %s can't be pre cached, unless saved in own *.tres file." % [file_name, value])
 
 func _get_resource_type(file_name : String) -> GDScriptNativeClass:
@@ -226,6 +240,7 @@ func _get_resource_type(file_name : String) -> GDScriptNativeClass:
 					"ParticlesMaterial": return ParticlesMaterial
 					"ShaderMaterial": return ShaderMaterial
 					"SpatialMaterial": return SpatialMaterial
+					"CanvasItemMaterial": return CanvasItemMaterial
 					_:
 						return null
 
