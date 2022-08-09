@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=2]
+[gd_scene load_steps=10 format=2]
 
 [ext_resource path="res://example/Floor/Floor.tscn" type="PackedScene" id=1]
 [ext_resource path="res://example/BallA/BallA.tscn" type="PackedScene" id=2]
@@ -8,6 +8,7 @@
 [ext_resource path="res://example/Television/Television.tscn" type="PackedScene" id=6]
 [ext_resource path="res://example/Spray/Spray.tscn" type="PackedScene" id=7]
 [ext_resource path="res://example/BallE/BallE.tscn" type="PackedScene" id=8]
+[ext_resource path="res://example/GodotSprite/GodotSprite.tscn" type="PackedScene" id=9]
 
 [node name="Start" type="Spatial"]
 
@@ -46,3 +47,6 @@ _has_power = true
 _has_signal = false
 
 [node name="Spray" parent="." instance=ExtResource( 7 )]
+
+[node name="GodotSprite" parent="." instance=ExtResource( 9 )]
+position = Vector2( 787, 100 )
