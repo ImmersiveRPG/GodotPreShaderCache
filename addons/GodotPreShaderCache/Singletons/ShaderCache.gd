@@ -118,7 +118,9 @@ func _run_thread_cache_shaders(_arg : int) -> void:
 					ShaderMaterial, SpatialMaterial, ParticlesMaterial, CanvasItemMaterial:
 						var geometry_instance = self._cache_resource_material(file_name, resource_type)
 						if geometry_instance:
+							_materials_mutex.lock()
 							_materials.append({ "file_name" : file_name, "geometry_instance" : geometry_instance, "resource_type" : resource_type })
+							_materials_mutex.unlock()
 					_:
 						if _is_logging: print("##### Skipping caching: ", file_name)
 
