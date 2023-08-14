@@ -20,7 +20,7 @@ func _ready() -> void:
 	var paths_to_ignore := [
 		"res:///addons/"
 	]
-	ShaderCache.start(self, "_on_each", "_on_done", paths_to_ignore, 100, 3000)
+	ShaderCache.start(self, "_on_each", "_on_done", paths_to_ignore)
 
 func _process(delta : float) -> void:
 	# Rotate each cube

@@ -7,12 +7,6 @@ extends Node
 signal on_each(percent, file_name, geometry_instance, resource_type)
 signal on_done()
 
-const DEFAULT_DELAY_MSEC_ON_EACH := 5
-const DEFAULT_DELAY_MSEC_ON_DONE := 5000
-
-var _delay_msec_on_each := 0
-var _delay_msec_on_done := 0
-
 var _is_running_mutex := Mutex.new()
 var _is_running := false
 
@@ -50,10 +44,7 @@ func send_next() -> void:
 	_ready_counter += 1
 	_ready_counter_mutex.unlock()
 
-func start(scene : Node, on_each : String, on_done : String, paths_to_ignore := [], delay_msec_on_each := DEFAULT_DELAY_MSEC_ON_EACH, delay_msec_on_done := DEFAULT_DELAY_MSEC_ON_DONE) -> void:
-	_delay_msec_on_each = delay_msec_on_each
-	_delay_msec_on_done = delay_msec_on_done
-
+func start(scene : Node, on_each : String, on_done : String, paths_to_ignore := []) -> void:
 	# Connect callbacks
 	var err := OK
 	err = self.connect("on_each", scene, on_each)
@@ -140,7 +131,6 @@ func _run_thread_fire_callbacks(_arg : int) -> void:
 
 		# Just wait if app is not ready
 		if not is_ready or is_empty:
-			OS.delay_msec(10)
 			continue
 
 		if not is_empty:
@@ -154,12 +144,10 @@ func _run_thread_fire_callbacks(_arg : int) -> void:
 
 			i += 1
 			var percent := i / float(_total_to_cache)
-			OS.delay_msec(_delay_msec_on_each)
 			CallThrottled.call_throttled(funcref(self, "emit_signal"), ["on_each", percent, entry.file_name, entry.geometry_instance, entry.resource_type])
 
 			if i == _total_to_cache:
 				self._set_is_running(false)
-				OS.delay_msec(_delay_msec_on_done)
 				CallThrottled.call_throttled(funcref(self, "emit_signal"), ["on_done"])
 
 func _cache_resource_material(resource : String, resource_type : GDScriptNativeClass) -> Node:
