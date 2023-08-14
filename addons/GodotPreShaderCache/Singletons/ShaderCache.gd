@@ -15,15 +15,8 @@ var _resource_files := []
 var _shader_cache := []
 var _prev_shader_compilation_mode := 0
 
-var _materials_mutex := Mutex.new()
-var _materials := []
-
-var _ready_counter_mutex := Mutex.new()
-var _ready_counter := 1
-
 var _total_to_cache := 0
-var _thread_cache_shaders : Thread
-var _thread_fire_callbacks : Thread
+var _thread : Thread
 
 func _exit_tree() -> void:
 	_shader_cache.clear()
@@ -38,11 +31,6 @@ func _set_is_running(value : bool) -> void:
 	_is_running_mutex.lock()
 	_is_running = value
 	_is_running_mutex.unlock()
-
-func send_next() -> void:
-	_ready_counter_mutex.lock()
-	_ready_counter += 1
-	_ready_counter_mutex.unlock()
 
 func start(scene : Node, on_each : String, on_done : String, paths_to_ignore := []) -> void:
 	# Connect callbacks
@@ -68,25 +56,17 @@ func start(scene : Node, on_each : String, on_done : String, paths_to_ignore := 
 
 	# Start threads
 	self._set_is_running(true)
-	_thread_cache_shaders = Thread.new()
-	err = _thread_cache_shaders.start(self, "_run_thread_cache_shaders", 0, Thread.PRIORITY_LOW)
-	assert(err == OK)
-
-	_thread_fire_callbacks = Thread.new()
-	err = _thread_fire_callbacks.start(self, "_run_thread_fire_callbacks", 0, Thread.PRIORITY_LOW)
+	_thread = Thread.new()
+	err = _thread.start(self, "_run_thread_cache_shaders", 0, Thread.PRIORITY_LOW)
 	assert(err == OK)
 
 func stop(scene : Node, on_each : String, on_done : String) -> void:
 	if self._get_is_running():
 		self._set_is_running(false)
 
-	if _thread_cache_shaders:
-		_thread_cache_shaders.wait_to_finish()
-		_thread_cache_shaders = null
-
-	if _thread_fire_callbacks:
-		_thread_fire_callbacks.wait_to_finish()
-		_thread_fire_callbacks = null
+	if _thread:
+		_thread.wait_to_finish()
+		_thread = null
 
 	# Reset shader compilation mode to previous
 	ProjectSettings.set_setting("rendering/gles3/shaders/shader_compilation_mode", _prev_shader_compilation_mode)
@@ -96,6 +76,7 @@ func stop(scene : Node, on_each : String, on_done : String) -> void:
 	self.disconnect("on_done", scene, on_done)
 
 func _run_thread_cache_shaders(_arg : int) -> void:
+	var i := 0
 	while self._get_is_running() and not _resource_files.empty():
 		var file_name = _resource_files.pop_front()
 		match file_name.get_extension().to_lower():
@@ -109,46 +90,17 @@ func _run_thread_cache_shaders(_arg : int) -> void:
 					ShaderMaterial, SpatialMaterial, ParticlesMaterial, CanvasItemMaterial:
 						var geometry_instance = self._cache_resource_material(file_name, resource_type)
 						if geometry_instance:
-							_materials_mutex.lock()
-							_materials.append({ "file_name" : file_name, "geometry_instance" : geometry_instance, "resource_type" : resource_type })
-							_materials_mutex.unlock()
+							i += 1
+							var percent := i / float(_total_to_cache)
+							var entry := { "file_name" : file_name, "geometry_instance" : geometry_instance, "resource_type" : resource_type }
+							CallThrottled.call_throttled(funcref(self, "emit_signal"), ["on_each", percent, entry.file_name, entry.geometry_instance, entry.resource_type])
+
+							if i == _total_to_cache:
+								self._set_is_running(false)
+								CallThrottled.call_throttled(funcref(self, "emit_signal"), ["on_done"])
 					_:
 						if _is_logging: print("##### Skipping caching: ", file_name)
 
-
-func _run_thread_fire_callbacks(_arg : int) -> void:
-	var i := 0
-	while self._get_is_running():
-		# Check if app is ready to fire next callback
-		_ready_counter_mutex.lock()
-		var is_ready := _ready_counter > 0
-		_ready_counter_mutex.unlock()
-
-		# Check if there are more materials to send to app
-		_materials_mutex.lock()
-		var is_empty := _materials.empty()
-		_materials_mutex.unlock()
-
-		# Just wait if app is not ready
-		if not is_ready or is_empty:
-			continue
-
-		if not is_empty:
-			_materials_mutex.lock()
-			var entry = _materials.pop_front()
-			_materials_mutex.unlock()
-
-			_ready_counter_mutex.lock()
-			_ready_counter -= 1
-			_ready_counter_mutex.unlock()
-
-			i += 1
-			var percent := i / float(_total_to_cache)
-			CallThrottled.call_throttled(funcref(self, "emit_signal"), ["on_each", percent, entry.file_name, entry.geometry_instance, entry.resource_type])
-
-			if i == _total_to_cache:
-				self._set_is_running(false)
-				CallThrottled.call_throttled(funcref(self, "emit_signal"), ["on_done"])
 
 func _cache_resource_material(resource : String, resource_type : GDScriptNativeClass) -> Node:
 	var start_time := 0.0

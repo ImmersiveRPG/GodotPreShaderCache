@@ -56,7 +56,6 @@ func _on_each(percent : float, file_name : String, mesh : Node, resource_type : 
 	#print("Cached: %s" % [file_name])
 
 	_progress_bar.value = percent * 100.0
-	ShaderCache.send_next()
 
 func _on_done() -> void:
 	yield(self.get_tree().create_timer(4), "timeout")
