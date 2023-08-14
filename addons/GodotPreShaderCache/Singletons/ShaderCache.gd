@@ -72,10 +72,13 @@ func _run_thread_cache_shaders(_arg : int) -> void:
 	while self._get_is_running() and not _resource_files.empty():
 		var file_name = _resource_files.pop_front()
 		i += 1
+
+		# Warn of materials inside scenes that can't be cached
+		self._warn_un_cacheable_sub_resource_materials(file_name)
+
 		match file_name.get_extension().to_lower():
-			# Warn of materials inside scenes that can't be cached
 			"tscn":
-				self._warn_un_cacheable_sub_resource_materials(file_name)
+				pass
 			# Cache all the materials
 			"tres":
 				var resource_type = self._get_resource_type(file_name)

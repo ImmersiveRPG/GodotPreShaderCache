@@ -59,3 +59,9 @@ margin_bottom = 40.0
 grow_horizontal = 0
 grow_vertical = 0
 rect_min_size = Vector2( 400, 20 )
+
+[node name="TimerFPS" type="Timer" parent="."]
+wait_time = 0.1
+autostart = true
+
+[connection signal="timeout" from="TimerFPS" to="." method="_on_TimerFPS_timeout"]

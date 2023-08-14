@@ -9,13 +9,14 @@ var _offset := Vector3.ZERO
 onready var _progress_bar = $CenterContainer/VBoxContainer/MarginContainer/LoadingProgressBar
 
 func _ready() -> void:
-	yield(self.get_tree().create_timer(2), "timeout")
+	yield(self.get_tree().create_timer(3), "timeout")
 
 	# Setup CallThrottled frame budget and threshold
 	var frame_budget_usec := int(floor(1000000 / float(Engine.get_frames_per_second())))
 	var frame_budget_threshold_usec := 5000
 	CallThrottled.start(frame_budget_usec, frame_budget_threshold_usec)
 
+	yield(self.get_tree().create_timer(2), "timeout")
 	# Setup ShaderCache
 	var paths_to_ignore := [
 		"res:///addons/"
@@ -65,3 +66,8 @@ func _on_done() -> void:
 
 	var err := self.get_tree().change_scene("res://example/Start/Start.tscn")
 	assert(err == OK)
+
+
+func _on_TimerFPS_timeout() -> void:
+	var title := "FPS: %s" % [Engine.get_frames_per_second()]
+	OS.set_window_title(title)
