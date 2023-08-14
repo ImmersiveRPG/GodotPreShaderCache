@@ -155,12 +155,12 @@ func _run_thread_fire_callbacks(_arg : int) -> void:
 			i += 1
 			var percent := i / float(_total_to_cache)
 			OS.delay_msec(_delay_msec_on_each)
-			self.call_deferred("emit_signal", "on_each", percent, entry.file_name, entry.geometry_instance, entry.resource_type)
+			CallThrottled.call_throttled(funcref(self, "emit_signal"), ["on_each", percent, entry.file_name, entry.geometry_instance, entry.resource_type])
 
 			if i == _total_to_cache:
 				self._set_is_running(false)
 				OS.delay_msec(_delay_msec_on_done)
-				self.call_deferred("emit_signal", "on_done")
+				CallThrottled.call_throttled(funcref(self, "emit_signal"), ["on_done"])
 
 func _cache_resource_material(resource : String, resource_type : GDScriptNativeClass) -> Node:
 	var start_time := 0.0
