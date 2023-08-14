@@ -15,7 +15,6 @@ var _resource_files := []
 var _shader_cache := []
 var _prev_shader_compilation_mode := 0
 
-var _total_to_cache := 0
 var _thread : Thread
 
 func _exit_tree() -> void:
@@ -46,15 +45,7 @@ func start(scene : Node, on_each : String, on_done : String, paths_to_ignore := 
 
 	_resource_files = self._get_res_file_list(["tscn", "tres"], paths_to_ignore)
 
-	# Get total number of shaders we will cache
-	var shader_types := [ShaderMaterial, SpatialMaterial, ParticlesMaterial, CanvasItemMaterial]
-	for file_name in _resource_files:
-		if file_name.get_extension().to_lower() == "tres":
-			var resource_type = self._get_resource_type(file_name)
-			if shader_types.has(resource_type):
-				_total_to_cache += 1
-
-	# Start threads
+	# Start thread
 	self._set_is_running(true)
 	_thread = Thread.new()
 	err = _thread.start(self, "_run_thread_cache_shaders", 0, Thread.PRIORITY_LOW)
@@ -77,8 +68,10 @@ func stop(scene : Node, on_each : String, on_done : String) -> void:
 
 func _run_thread_cache_shaders(_arg : int) -> void:
 	var i := 0
+	var total := _resource_files.size()
 	while self._get_is_running() and not _resource_files.empty():
 		var file_name = _resource_files.pop_front()
+		i += 1
 		match file_name.get_extension().to_lower():
 			# Warn of materials inside scenes that can't be cached
 			"tscn":
@@ -90,17 +83,14 @@ func _run_thread_cache_shaders(_arg : int) -> void:
 					ShaderMaterial, SpatialMaterial, ParticlesMaterial, CanvasItemMaterial:
 						var geometry_instance = self._cache_resource_material(file_name, resource_type)
 						if geometry_instance:
-							i += 1
-							var percent := i / float(_total_to_cache)
+							var percent := i / float(total)
 							var entry := { "file_name" : file_name, "geometry_instance" : geometry_instance, "resource_type" : resource_type }
 							CallThrottled.call_throttled(funcref(self, "emit_signal"), ["on_each", percent, entry.file_name, entry.geometry_instance, entry.resource_type])
-
-							if i == _total_to_cache:
-								self._set_is_running(false)
-								CallThrottled.call_throttled(funcref(self, "emit_signal"), ["on_done"])
 					_:
 						if _is_logging: print("##### Skipping caching: ", file_name)
 
+	self._set_is_running(false)
+	CallThrottled.call_throttled(funcref(self, "emit_signal"), ["on_done"])
 
 func _cache_resource_material(resource : String, resource_type : GDScriptNativeClass) -> Node:
 	var start_time := 0.0

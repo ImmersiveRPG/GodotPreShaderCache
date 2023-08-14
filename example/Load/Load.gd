@@ -12,7 +12,7 @@ func _ready() -> void:
 	yield(self.get_tree().create_timer(2), "timeout")
 
 	# Setup CallThrottled frame budget and threshold
-	var frame_budget_usec : int = floor(1000000 / float(Engine.get_frames_per_second()))
+	var frame_budget_usec := int(floor(1000000 / float(Engine.get_frames_per_second())))
 	var frame_budget_threshold_usec := 5000
 	CallThrottled.start(frame_budget_usec, frame_budget_threshold_usec)
 
@@ -58,6 +58,8 @@ func _on_each(percent : float, file_name : String, mesh : Node, resource_type : 
 	_progress_bar.value = percent * 100.0
 
 func _on_done() -> void:
+	_progress_bar.value = 100.0
+
 	yield(self.get_tree().create_timer(4), "timeout")
 	ShaderCache.stop(self, "_on_each", "_on_done")
 
