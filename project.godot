@@ -16,11 +16,12 @@ config/icon="res://icon.png"
 
 [autoload]
 
+CallThrottled="*res://addons/GodotCallThrottled/Singletons/CallThrottled.gd"
 ShaderCache="*res://addons/GodotPreShaderCache/Singletons/ShaderCache.gd"
 
 [editor_plugins]
 
-enabled=PoolStringArray( "res://addons/GodotPreShaderCache/plugin.cfg" )
+enabled=PoolStringArray( "res://addons/GodotCallThrottled/plugin.cfg", "res://addons/GodotPreShaderCache/plugin.cfg" )
 
 [gui]
 
