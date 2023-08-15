@@ -66,8 +66,37 @@ func stop(scene : Node, on_each : String, on_done : String) -> void:
 	self.disconnect("on_each", scene, on_each)
 	self.disconnect("on_done", scene, on_done)
 
+
+
+func _get_ext_resource_textures(file_name : String) -> Array:
+	var texture_files := []
+
+	var headers = self._parse_resource_file_section_header(file_name, "ext_resource")
+	for header in headers:
+		for key in header:
+			if key == "type":
+				var value = header[key].lstrip("\"").rstrip("\"")
+				if value == "Texture":
+					var path = header["path"].lstrip("\"").rstrip("\"")
+					texture_files.append(path)
+
+	return texture_files
+
+
 func _run_thread_cache_shaders(_arg : int) -> void:
 	var resource_files := self._get_res_file_list(["tscn", "tres"], _paths_to_ignore)
+
+	# Find all the texture resources inside tcsn files
+	for file_name in resource_files.duplicate():
+		match file_name.get_extension().to_lower():
+			"tscn":
+				var texture_ext_resources = self._get_ext_resource_textures(file_name)
+				for entry in texture_ext_resources:
+					if not entry in resource_files:
+						resource_files.append(entry)
+			_:
+				pass
+
 	resource_files = self._sort_resource_files_by_type(resource_files)
 
 	var i := 0
@@ -75,6 +104,7 @@ func _run_thread_cache_shaders(_arg : int) -> void:
 	while self._get_is_running() and not resource_files.empty():
 		var file_name = resource_files.pop_front()
 		i += 1
+		var percent := i / float(total)
 
 		# Warn of materials inside scenes that can't be cached
 		self._warn_un_cacheable_sub_resource_materials(file_name)
@@ -82,14 +112,12 @@ func _run_thread_cache_shaders(_arg : int) -> void:
 		match file_name.get_extension().to_lower():
 			"tscn":
 				pass
-			# Cache all the materials
-			"tres":
+			"tres", "png":
 				var resource_type = self._get_resource_type(file_name)
 				match resource_type:
-					Shader, ShaderMaterial, SpatialMaterial, ParticlesMaterial, CanvasItemMaterial:
+					Texture, Shader, ShaderMaterial, SpatialMaterial, ParticlesMaterial, CanvasItemMaterial:
 						var geometry_instance = self._cache_resource_material(file_name, resource_type)
 						if geometry_instance:
-							var percent := i / float(total)
 							var entry := { "file_name" : file_name, "geometry_instance" : geometry_instance, "resource_type" : resource_type }
 							#self.call_deferred("emit_signal", "on_each", percent, entry.file_name, entry.geometry_instance, entry.resource_type)
 							CallThrottled.call_throttled(funcref(self, "emit_signal"), ["on_each", percent, entry.file_name, entry.geometry_instance, entry.resource_type])
@@ -102,23 +130,40 @@ func _run_thread_cache_shaders(_arg : int) -> void:
 	#self.call_deferred("emit_signal", "on_done")
 	CallThrottled.call_throttled(funcref(self, "emit_signal"), ["on_done"])
 
-func _cache_resource_material(resource : String, resource_type : GDScriptNativeClass) -> Node:
+func _cache_resource_material(file_name : String, resource_type : GDScriptNativeClass):
 	var start_time := 0.0
 	var size := 0.8
 
-	# Load the material resource
 	start_time = OS.get_ticks_msec()
-	var res := ResourceLoader.load(resource)
-	var is_desired_format := res is Shader or res is ShaderMaterial or res is SpatialMaterial or res is ParticlesMaterial or res is CanvasItemMaterial
+	var res : Resource = null
+	var is_desired_format := false
+
+	# Load the image resource
+	if resource_type == Texture:
+		res = Image.new()
+		var err : int = res.load(file_name)
+		assert(err == OK)
+		is_desired_format = res is Image
+	# Load the resource
+	else:
+		res = ResourceLoader.load(file_name)
+		is_desired_format = res is Shader or res is ShaderMaterial or res is SpatialMaterial or res is ParticlesMaterial or res is CanvasItemMaterial
+
 	if not is_desired_format:
 		return null
 
-	if _is_logging: print(resource)
+	if _is_logging: print(file_name)
 	if _is_logging: print("    Loading resource: ", OS.get_ticks_msec() - start_time)
 	start_time = OS.get_ticks_msec()
 
 	#print(res)
 	match resource_type:
+		Texture:
+			var image_texture := ImageTexture.new()
+			image_texture.create_from_image(res)
+
+			_shader_cache.append(image_texture)
+			return image_texture
 		Shader:
 			var shader_mat := ShaderMaterial.new()
 			shader_mat.shader = res
@@ -187,6 +232,10 @@ func _warn_un_cacheable_sub_resource_materials(file_name : String) -> void:
 						push_warning("ShaderCache: scene '%s' sub resource %s can't be pre cached, unless saved in own *.tres file." % [file_name, value])
 
 func _get_resource_type(file_name : String) -> GDScriptNativeClass:
+	var ext := file_name.get_extension().to_lower()
+	if ext == "png":
+		return Texture
+
 	var headers = self._parse_resource_file_section_header(file_name, "gd_resource")
 	for header in headers:
 		for key in header:
@@ -205,6 +254,7 @@ func _get_resource_type(file_name : String) -> GDScriptNativeClass:
 
 
 func _sort_resource_files_by_type(resource_files : Array) -> Array:
+	var images := []
 	var shaders := []
 	var spatial_mats := []
 	var shader_mats := []
@@ -219,6 +269,8 @@ func _sort_resource_files_by_type(resource_files : Array) -> Array:
 		match file_name.get_extension().to_lower():
 			"tscn":
 				scenes.append(file_name)
+			"png":
+				images.append(file_name)
 			"tres":
 				var resource_type = self._get_resource_type(file_name)
 				match resource_type:
@@ -233,6 +285,7 @@ func _sort_resource_files_by_type(resource_files : Array) -> Array:
 					CanvasItemMaterial:
 						canvas_mats.append(file_name)
 
+	resource_files.append_array(images)
 	resource_files.append_array(shaders)
 	resource_files.append_array(spatial_mats)
 	resource_files.append_array(shader_mats)

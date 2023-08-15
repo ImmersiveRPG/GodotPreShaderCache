@@ -29,18 +29,23 @@ func _process(delta : float) -> void:
 		if child is MeshInstance:
 			child.rotation.x += delta * deg2rad(60.0)
 
-func _on_each(percent : float, file_name : String, mesh : Node, resource_type : GDScriptNativeClass) -> void:
-	# Add the mesh to the scene
-	var start := OS.get_ticks_usec()
-	self.add_child(mesh)
+func _on_each(percent : float, file_name : String, node : Object, resource_type : GDScriptNativeClass) -> void:
+	# Add the node to the scene
+	#var start := OS.get_ticks_usec()
+	if node is ImageTexture:
+		var image_texture = node
+		var sprite3d := Sprite3D.new()
+		sprite3d.texture = image_texture
+		node = sprite3d
+	self.add_child(node)
 	#print("!! _on_each: %s" % [OS.get_ticks_usec() - start])
-	if "position" in mesh:
+	if "position" in node:
 		var pos = $Camera.unproject_position(_offset)
-		mesh.position = Vector2(pos.x, pos.y)
+		node.position = Vector2(pos.x, pos.y)
 	else:
-		mesh.transform.origin = _offset
+		node.transform.origin = _offset
 
-	# Update the offset for the next mesh
+	# Update the offset for the next node
 	var size := 0.4
 	_offset.x += size * 2.0
 	if _offset.x >= 20.0:
@@ -48,6 +53,8 @@ func _on_each(percent : float, file_name : String, mesh : Node, resource_type : 
 		_offset.y -= size * 2.0
 
 	match resource_type:
+		Texture:
+			print("Cached texture: %s" % [file_name])
 		Shader:
 			print("Cached shader: %s" % [file_name])
 		SpatialMaterial:
