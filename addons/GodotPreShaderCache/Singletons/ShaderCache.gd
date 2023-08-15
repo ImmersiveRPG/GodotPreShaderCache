@@ -83,16 +83,20 @@ func _run_thread_cache_shaders(_arg : int) -> void:
 			"tres":
 				var resource_type = self._get_resource_type(file_name)
 				match resource_type:
-					ShaderMaterial, SpatialMaterial, ParticlesMaterial, CanvasItemMaterial:
+					Shader, ShaderMaterial, SpatialMaterial, ParticlesMaterial, CanvasItemMaterial:
 						var geometry_instance = self._cache_resource_material(file_name, resource_type)
 						if geometry_instance:
 							var percent := i / float(total)
 							var entry := { "file_name" : file_name, "geometry_instance" : geometry_instance, "resource_type" : resource_type }
+							#self.call_deferred("emit_signal", "on_each", percent, entry.file_name, entry.geometry_instance, entry.resource_type)
 							CallThrottled.call_throttled(funcref(self, "emit_signal"), ["on_each", percent, entry.file_name, entry.geometry_instance, entry.resource_type])
+						else:
+							print(["????", file_name, resource_type, geometry_instance])
 					_:
 						if _is_logging: print("##### Skipping caching: ", file_name)
 
 	self._set_is_running(false)
+	#self.call_deferred("emit_signal", "on_done")
 	CallThrottled.call_throttled(funcref(self, "emit_signal"), ["on_done"])
 
 func _cache_resource_material(resource : String, resource_type : GDScriptNativeClass) -> Node:
@@ -101,8 +105,8 @@ func _cache_resource_material(resource : String, resource_type : GDScriptNativeC
 
 	# Load the material resource
 	start_time = OS.get_ticks_msec()
-	var mat := ResourceLoader.load(resource)
-	var is_desired_format := mat is ShaderMaterial or mat is SpatialMaterial or mat is ParticlesMaterial or mat is CanvasItemMaterial
+	var res := ResourceLoader.load(resource)
+	var is_desired_format := res is Shader or res is ShaderMaterial or res is SpatialMaterial or res is ParticlesMaterial or res is CanvasItemMaterial
 	if not is_desired_format:
 		return null
 
@@ -110,8 +114,19 @@ func _cache_resource_material(resource : String, resource_type : GDScriptNativeC
 	if _is_logging: print("    Loading resource: ", OS.get_ticks_msec() - start_time)
 	start_time = OS.get_ticks_msec()
 
-	#print(mat)
+	#print(res)
 	match resource_type:
+		Shader:
+			var shader_mat := ShaderMaterial.new()
+			shader_mat.shader = res
+			var mesh_instance := MeshInstance.new()
+			var cube_mesh := CubeMesh.new()
+			cube_mesh.size = Vector3.ONE * size
+			cube_mesh.material = shader_mat
+			mesh_instance.mesh = cube_mesh
+
+			_shader_cache.append(res)
+			return mesh_instance
 		# Create a cube mesh that is loaded with the material
 		ShaderMaterial, SpatialMaterial:
 			var mesh_instance := MeshInstance.new()
@@ -120,12 +135,12 @@ func _cache_resource_material(resource : String, resource_type : GDScriptNativeC
 			if _is_logging: print("    Creating mesh: ", OS.get_ticks_msec() - start_time)
 			start_time = OS.get_ticks_msec()
 
-			cube_mesh.material = mat
+			cube_mesh.material = res
 			mesh_instance.mesh = cube_mesh
 			if _is_logging: print("    Setting mesh material: ", OS.get_ticks_msec() - start_time)
 			start_time = OS.get_ticks_msec()
 
-			_shader_cache.append(mat)
+			_shader_cache.append(res)
 			return mesh_instance
 		ParticlesMaterial:
 			var particles := Particles.new()
@@ -134,13 +149,13 @@ func _cache_resource_material(resource : String, resource_type : GDScriptNativeC
 			if _is_logging: print("    Creating particles: ", OS.get_ticks_msec() - start_time)
 			start_time = OS.get_ticks_msec()
 
-			cube_mesh.material = mat
-			particles.process_material = mat
+			cube_mesh.material = res
+			particles.process_material = res
 			particles.draw_pass_1 = cube_mesh
 			if _is_logging: print("    Setting particles material: ", OS.get_ticks_msec() - start_time)
 			start_time = OS.get_ticks_msec()
 
-			_shader_cache.append(mat)
+			_shader_cache.append(res)
 			return particles
 		CanvasItemMaterial:
 			var mesh_instance := MeshInstance2D.new()
@@ -150,11 +165,11 @@ func _cache_resource_material(resource : String, resource_type : GDScriptNativeC
 			start_time = OS.get_ticks_msec()
 
 			mesh_instance.mesh = quad_mesh
-			mesh_instance.material = mat
+			mesh_instance.material = res
 			if _is_logging: print("    Setting mesh2d material: ", OS.get_ticks_msec() - start_time)
 			start_time = OS.get_ticks_msec()
 
-			_shader_cache.append(mat)
+			_shader_cache.append(res)
 			return mesh_instance
 	return null
 
@@ -175,6 +190,7 @@ func _get_resource_type(file_name : String) -> GDScriptNativeClass:
 			if key == "type":
 				var type = header[key].lstrip("\"").rstrip("\"")
 				match type:
+					"Shader": return Shader
 					"ParticlesMaterial": return ParticlesMaterial
 					"ShaderMaterial": return ShaderMaterial
 					"SpatialMaterial": return SpatialMaterial

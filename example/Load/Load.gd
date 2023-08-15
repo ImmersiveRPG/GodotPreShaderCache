@@ -31,7 +31,9 @@ func _process(delta : float) -> void:
 
 func _on_each(percent : float, file_name : String, mesh : Node, resource_type : GDScriptNativeClass) -> void:
 	# Add the mesh to the scene
+	var start := OS.get_ticks_usec()
 	self.add_child(mesh)
+	#print("!! _on_each: %s" % [OS.get_ticks_usec() - start])
 	if "position" in mesh:
 		var pos = $Camera.unproject_position(_offset)
 		mesh.position = Vector2(pos.x, pos.y)
@@ -46,10 +48,12 @@ func _on_each(percent : float, file_name : String, mesh : Node, resource_type : 
 		_offset.y -= size * 2.0
 
 	match resource_type:
-		ShaderMaterial:
-			print("Cached shader material: %s" % [file_name])
+		Shader:
+			print("Cached shader: %s" % [file_name])
 		SpatialMaterial:
 			print("Cached spatial material: %s" % [file_name])
+		ShaderMaterial:
+			print("Cached shader material: %s" % [file_name])
 		ParticlesMaterial:
 			print("Cached particle material: %s" % [file_name])
 		CanvasItemMaterial:
