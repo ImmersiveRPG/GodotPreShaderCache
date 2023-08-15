@@ -4,6 +4,16 @@
 
 extends Node
 
+# TODO:
+# . Make it ResourceLoader.load all tscn files, but last after materials, shaders, and textures.
+# . Rename to PreCache
+# . Make it cache jpeg Textures too
+# . Make it load images as resources before import
+# . load tcsn files too resources, because image.load will fail on exported games
+# . make self._parse_resource_file_section_header plural
+# . remove need to .lstrip("\"").rstrip("\"")
+
+
 signal on_each(percent, file_name, geometry_instance, resource_type)
 signal on_done()
 
