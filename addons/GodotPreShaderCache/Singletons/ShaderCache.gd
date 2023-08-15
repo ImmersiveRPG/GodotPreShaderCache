@@ -11,7 +11,7 @@ var _is_running_mutex := Mutex.new()
 var _is_running := false
 
 var _is_logging := false
-var _resource_files := []
+var _paths_to_ignore := []
 var _shader_cache := []
 var _prev_shader_compilation_mode := 0
 
@@ -43,7 +43,7 @@ func start(scene : Node, on_each : String, on_done : String, paths_to_ignore := 
 	_prev_shader_compilation_mode = ProjectSettings.get_setting("rendering/gles3/shaders/shader_compilation_mode") as int
 	ProjectSettings.set_setting("rendering/gles3/shaders/shader_compilation_mode", 0)
 
-	_resource_files = self._get_res_file_list(["tscn", "tres"], paths_to_ignore)
+	_paths_to_ignore = paths_to_ignore
 
 	# Start thread
 	self._set_is_running(true)
@@ -67,10 +67,13 @@ func stop(scene : Node, on_each : String, on_done : String) -> void:
 	self.disconnect("on_done", scene, on_done)
 
 func _run_thread_cache_shaders(_arg : int) -> void:
+	var resource_files := self._get_res_file_list(["tscn", "tres"], _paths_to_ignore)
+	resource_files = self._sort_resource_files_by_type(resource_files)
+
 	var i := 0
-	var total := _resource_files.size()
-	while self._get_is_running() and not _resource_files.empty():
-		var file_name = _resource_files.pop_front()
+	var total := resource_files.size()
+	while self._get_is_running() and not resource_files.empty():
+		var file_name = resource_files.pop_front()
 		i += 1
 
 		# Warn of materials inside scenes that can't be cached
@@ -200,6 +203,44 @@ func _get_resource_type(file_name : String) -> GDScriptNativeClass:
 
 	return null
 
+
+func _sort_resource_files_by_type(resource_files : Array) -> Array:
+	var shaders := []
+	var spatial_mats := []
+	var shader_mats := []
+	var particle_mats := []
+	var canvas_mats := []
+	var scenes := []
+
+	# Sort the list of resources by type
+	while not resource_files.empty():
+		var file_name = resource_files.pop_front()
+
+		match file_name.get_extension().to_lower():
+			"tscn":
+				scenes.append(file_name)
+			"tres":
+				var resource_type = self._get_resource_type(file_name)
+				match resource_type:
+					Shader:
+						shaders.append(file_name)
+					SpatialMaterial:
+						spatial_mats.append(file_name)
+					ShaderMaterial:
+						shader_mats.append(file_name)
+					ParticlesMaterial:
+						particle_mats.append(file_name)
+					CanvasItemMaterial:
+						canvas_mats.append(file_name)
+
+	resource_files.append_array(shaders)
+	resource_files.append_array(spatial_mats)
+	resource_files.append_array(shader_mats)
+	resource_files.append_array(particle_mats)
+	resource_files.append_array(canvas_mats)
+	resource_files.append_array(scenes)
+
+	return resource_files
 
 func _parse_resource_file_section_header(file_name : String, section_name : String) -> Array:
 	var f := File.new()
