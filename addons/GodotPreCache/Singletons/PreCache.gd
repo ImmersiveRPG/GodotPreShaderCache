@@ -10,7 +10,6 @@ extends Node
 # . Make it load images as resources before import
 # . load image files too resources, because image.load will fail on exported games
 
-
 signal on_each(percent, file_name, thing, resource_type)
 signal on_done()
 
@@ -19,7 +18,7 @@ var _is_running := false
 
 var _is_logging := false
 var _paths_to_ignore := []
-var _cache := []
+var _cache := {}
 var _prev_shader_compilation_mode := 0
 
 var _thread : Thread
@@ -37,6 +36,9 @@ func _set_is_running(value : bool) -> void:
 	_is_running_mutex.lock()
 	_is_running = value
 	_is_running_mutex.unlock()
+
+func has_cached(file_name : String) -> bool:
+	return file_name in _cache
 
 func start(scene : Node, on_each : String, on_done : String, paths_to_ignore := []) -> void:
 	# Connect callbacks
@@ -163,13 +165,13 @@ func _cache_resource_material(file_name : String, resource_type : GDScriptNative
 	#print(res)
 	match resource_type:
 		PackedScene:
-			_cache.append(res)
+			_cache[file_name] = res
 			return res
 		Texture:
 			var image_texture := ImageTexture.new()
 			image_texture.create_from_image(res)
 
-			_cache.append(image_texture)
+			_cache[file_name] = image_texture
 			return image_texture
 		Shader:
 			var shader_mat := ShaderMaterial.new()
@@ -180,7 +182,7 @@ func _cache_resource_material(file_name : String, resource_type : GDScriptNative
 			cube_mesh.material = shader_mat
 			mesh_instance.mesh = cube_mesh
 
-			_cache.append(res)
+			_cache[file_name] = res
 			return mesh_instance
 		# Create a cube mesh that is loaded with the material
 		ShaderMaterial, SpatialMaterial:
@@ -195,7 +197,7 @@ func _cache_resource_material(file_name : String, resource_type : GDScriptNative
 			if _is_logging: print("    Setting mesh material: ", OS.get_ticks_msec() - start_time)
 			start_time = OS.get_ticks_msec()
 
-			_cache.append(res)
+			_cache[file_name] = res
 			return mesh_instance
 		ParticlesMaterial:
 			var particles := Particles.new()
@@ -210,7 +212,7 @@ func _cache_resource_material(file_name : String, resource_type : GDScriptNative
 			if _is_logging: print("    Setting particles material: ", OS.get_ticks_msec() - start_time)
 			start_time = OS.get_ticks_msec()
 
-			_cache.append(res)
+			_cache[file_name] = res
 			return particles
 		CanvasItemMaterial:
 			var mesh_instance := MeshInstance2D.new()
@@ -224,7 +226,7 @@ func _cache_resource_material(file_name : String, resource_type : GDScriptNative
 			if _is_logging: print("    Setting mesh2d material: ", OS.get_ticks_msec() - start_time)
 			start_time = OS.get_ticks_msec()
 
-			_cache.append(res)
+			_cache[file_name] = res
 			return mesh_instance
 
 	return null
@@ -368,3 +370,4 @@ func _get_res_file_list(extensions : Array, paths_to_ignore : Array) -> Array:
 		dir.list_dir_end()
 
 	return resources
+
