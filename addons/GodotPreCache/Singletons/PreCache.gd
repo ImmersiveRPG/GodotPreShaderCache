@@ -333,41 +333,23 @@ func _parse_resource_file_section_headers(file_name : String, section_name : Str
 
 func _get_res_file_list(extensions : Array, paths_to_ignore : Array) -> Array:
 	var resources := []
+	var paths := ["res://"]
+	while not paths.empty():
+		var path = paths.pop_front()
 
-	# Get all the resource files in the project
-	var to_search := ["res://"]
-	while not to_search.empty():
-		var path = to_search.pop_front()
-		#print("while \"%s\"..." % [path])
-		var dir := Directory.new()
-		var result = dir.open(path)
-		assert(result == OK)
-		dir.list_dir_begin()
-
-		var has_more_entries := true
-		while has_more_entries:
-			var entry = dir.get_next()
-			var full_entry = dir.get_current_dir() + "/" + entry
-			#print("    while \"%s\" \"%s\"" % [dir.get_current_dir(), entry])
-			if dir.current_is_dir():
-				if entry != "" and entry != ".." and entry != ".":
-					#print("!!!!!! added full_entry \"%s\" \"%s\"..." % [entry, full_entry])
-					to_search.append(full_entry)
+		for entry in DirectoryIterator.new(path, true, true):
+			if entry.is_dir:
+				paths.append(path + entry.name + '/')
 			else:
+				var full_entry = path + entry.name
+
 				var is_ignored := false
 				for path_to_ignore in paths_to_ignore:
-					if entry == "" or full_entry.begins_with(path_to_ignore):
+					if full_entry.begins_with(path_to_ignore):
 						is_ignored = true
 
-				if entry != "" and not is_ignored:
-					#print("    ", full_entry)
-					if extensions.has(full_entry.get_extension().to_lower()):
-						resources.append(full_entry)
-
-			if entry == "":
-				has_more_entries = false
-
-		dir.list_dir_end()
+				if not is_ignored and extensions.has(full_entry.get_extension().to_lower()):
+					resources.append(full_entry)
 
 	return resources
 

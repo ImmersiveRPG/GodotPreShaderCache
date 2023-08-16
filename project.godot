@@ -8,6 +8,16 @@
 
 config_version=4
 
+_global_script_classes=[ {
+"base": "Node",
+"class": "DirectoryIterator",
+"language": "GDScript",
+"path": "res://addons/GodotPreCache/Singletons/DirectoryIterator.gd"
+} ]
+_global_script_class_icons={
+"DirectoryIterator": ""
+}
+
 [application]
 
 config/name="Godot Pre Cache"
