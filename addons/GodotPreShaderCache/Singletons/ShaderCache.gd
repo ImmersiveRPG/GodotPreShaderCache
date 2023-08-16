@@ -22,13 +22,13 @@ var _is_running := false
 
 var _is_logging := false
 var _paths_to_ignore := []
-var _shader_cache := []
+var _cache := []
 var _prev_shader_compilation_mode := 0
 
 var _thread : Thread
 
 func _exit_tree() -> void:
-	_shader_cache.clear()
+	_cache.clear()
 
 func _get_is_running() -> bool:
 	_is_running_mutex.lock()
@@ -124,13 +124,13 @@ func _run_thread_cache_shaders(_arg : int) -> void:
 				var resource_type = self._get_resource_type(file_name)
 				match resource_type:
 					PackedScene, Texture, Shader, ShaderMaterial, SpatialMaterial, ParticlesMaterial, CanvasItemMaterial:
-						var geometry_instance = self._cache_resource_material(file_name, resource_type)
-						if geometry_instance:
-							var entry := { "file_name" : file_name, "geometry_instance" : geometry_instance, "resource_type" : resource_type }
-							#self.call_deferred("emit_signal", "on_each", percent, entry.file_name, entry.geometry_instance, entry.resource_type)
-							CallThrottled.call_throttled(funcref(self, "emit_signal"), ["on_each", percent, entry.file_name, entry.geometry_instance, entry.resource_type])
+						var thing = self._cache_resource_material(file_name, resource_type)
+						if thing:
+							#var entry := { "file_name" : file_name, "thing" : thing, "resource_type" : resource_type }
+							#self.call_deferred("emit_signal", "on_each", percent, entry.file_name, entry.thing, entry.resource_type)
+							CallThrottled.call_throttled(funcref(self, "emit_signal"), ["on_each", percent, file_name, thing, resource_type])
 						else:
-							print(["????", file_name, resource_type, geometry_instance])
+							print(["????", file_name, resource_type, thing])
 					_:
 						if _is_logging: print("##### Skipping caching: ", file_name)
 
@@ -166,12 +166,12 @@ func _cache_resource_material(file_name : String, resource_type : GDScriptNative
 	#print(res)
 	match resource_type:
 		PackedScene:
-			_shader_cache.append(res)
+			_cache.append(res)
 		Texture:
 			var image_texture := ImageTexture.new()
 			image_texture.create_from_image(res)
 
-			_shader_cache.append(image_texture)
+			_cache.append(image_texture)
 			return image_texture
 		Shader:
 			var shader_mat := ShaderMaterial.new()
@@ -182,7 +182,7 @@ func _cache_resource_material(file_name : String, resource_type : GDScriptNative
 			cube_mesh.material = shader_mat
 			mesh_instance.mesh = cube_mesh
 
-			_shader_cache.append(res)
+			_cache.append(res)
 			return mesh_instance
 		# Create a cube mesh that is loaded with the material
 		ShaderMaterial, SpatialMaterial:
@@ -197,7 +197,7 @@ func _cache_resource_material(file_name : String, resource_type : GDScriptNative
 			if _is_logging: print("    Setting mesh material: ", OS.get_ticks_msec() - start_time)
 			start_time = OS.get_ticks_msec()
 
-			_shader_cache.append(res)
+			_cache.append(res)
 			return mesh_instance
 		ParticlesMaterial:
 			var particles := Particles.new()
@@ -212,7 +212,7 @@ func _cache_resource_material(file_name : String, resource_type : GDScriptNative
 			if _is_logging: print("    Setting particles material: ", OS.get_ticks_msec() - start_time)
 			start_time = OS.get_ticks_msec()
 
-			_shader_cache.append(res)
+			_cache.append(res)
 			return particles
 		CanvasItemMaterial:
 			var mesh_instance := MeshInstance2D.new()
@@ -226,8 +226,9 @@ func _cache_resource_material(file_name : String, resource_type : GDScriptNative
 			if _is_logging: print("    Setting mesh2d material: ", OS.get_ticks_msec() - start_time)
 			start_time = OS.get_ticks_msec()
 
-			_shader_cache.append(res)
+			_cache.append(res)
 			return mesh_instance
+
 	return null
 
 func _warn_un_cacheable_sub_resource_materials(file_name : String) -> void:
