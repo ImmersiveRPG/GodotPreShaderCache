@@ -5,8 +5,8 @@
 extends Node
 
 # TODO:
-# . Make it ResourceLoader.load all tscn files, but last after materials, shaders, and textures.
 # . Rename to PreCache
+# . Add an enum so we can control what to cache: enum ToCache {All, TextScenes, Images, Textures, Shaders, Materials, }
 # . Make it cache jpeg Textures too
 # . Make it load images as resources before import
 # . load tcsn files too resources, because image.load will fail on exported games
@@ -120,12 +120,10 @@ func _run_thread_cache_shaders(_arg : int) -> void:
 		self._warn_un_cacheable_sub_resource_materials(file_name)
 
 		match file_name.get_extension().to_lower():
-			"tscn":
-				pass
-			"tres", "png":
+			"tscn", "tres", "png":
 				var resource_type = self._get_resource_type(file_name)
 				match resource_type:
-					Texture, Shader, ShaderMaterial, SpatialMaterial, ParticlesMaterial, CanvasItemMaterial:
+					PackedScene, Texture, Shader, ShaderMaterial, SpatialMaterial, ParticlesMaterial, CanvasItemMaterial:
 						var geometry_instance = self._cache_resource_material(file_name, resource_type)
 						if geometry_instance:
 							var entry := { "file_name" : file_name, "geometry_instance" : geometry_instance, "resource_type" : resource_type }
@@ -146,19 +144,18 @@ func _cache_resource_material(file_name : String, resource_type : GDScriptNative
 
 	start_time = OS.get_ticks_msec()
 	var res : Resource = null
-	var is_desired_format := false
 
-	# Load the image resource
-	if resource_type == Texture:
-		res = Image.new()
-		var err : int = res.load(file_name)
-		assert(err == OK)
-		is_desired_format = res is Image
-	# Load the resource
-	else:
-		res = ResourceLoader.load(file_name)
-		is_desired_format = res is Shader or res is ShaderMaterial or res is SpatialMaterial or res is ParticlesMaterial or res is CanvasItemMaterial
+	match resource_type:
+		Texture:
+			# Load the image resource
+			res = Image.new()
+			var err : int = res.load(file_name)
+			assert(err == OK)
+		_:
+			# Load the resource
+			res = ResourceLoader.load(file_name)
 
+	var is_desired_format := res is PackedScene or res is Image or res is Shader or res is ShaderMaterial or res is SpatialMaterial or res is ParticlesMaterial or res is CanvasItemMaterial
 	if not is_desired_format:
 		return null
 
@@ -168,6 +165,8 @@ func _cache_resource_material(file_name : String, resource_type : GDScriptNative
 
 	#print(res)
 	match resource_type:
+		PackedScene:
+			_shader_cache.append(res)
 		Texture:
 			var image_texture := ImageTexture.new()
 			image_texture.create_from_image(res)
@@ -243,8 +242,11 @@ func _warn_un_cacheable_sub_resource_materials(file_name : String) -> void:
 
 func _get_resource_type(file_name : String) -> GDScriptNativeClass:
 	var ext := file_name.get_extension().to_lower()
-	if ext == "png":
-		return Texture
+	match ext:
+		"png":
+			return Texture
+		"tscn":
+			return PackedScene
 
 	var headers = self._parse_resource_file_section_header(file_name, "gd_resource")
 	for header in headers:

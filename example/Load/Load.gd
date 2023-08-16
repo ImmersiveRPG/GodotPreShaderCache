@@ -37,22 +37,31 @@ func _on_each(percent : float, file_name : String, node : Object, resource_type 
 		var sprite3d := Sprite3D.new()
 		sprite3d.texture = image_texture
 		node = sprite3d
-	self.add_child(node)
+
 	#print("!! _on_each: %s" % [OS.get_ticks_usec() - start])
+	# Add the node to the scene if it has a position or transform
+	var is_add_child := false
 	if "position" in node:
 		var pos = $Camera.unproject_position(_offset)
 		node.position = Vector2(pos.x, pos.y)
-	else:
+		is_add_child = true
+	elif "transform" in node:
 		node.transform.origin = _offset
+		is_add_child = true
 
 	# Update the offset for the next node
-	var size := 0.4
-	_offset.x += size * 2.0
-	if _offset.x >= 20.0:
-		_offset.x = 0.0
-		_offset.y -= size * 2.0
+	if is_add_child:
+		self.add_child(node)
+
+		var size := 0.4
+		_offset.x += size * 2.0
+		if _offset.x >= 20.0:
+			_offset.x = 0.0
+			_offset.y -= size * 2.0
 
 	match resource_type:
+		PackedScene:
+			print("Cached packed scene: %s" % [file_name])
 		Texture:
 			print("Cached texture: %s" % [file_name])
 		Shader:
