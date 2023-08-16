@@ -6,7 +6,6 @@ extends Node
 
 # TODO:
 # . Add an enum so we can control what to cache: enum ToCache {All, TextScenes, Images, Textures, Shaders, Materials, }
-# . Make it cache jpeg Textures too
 # . Make it load images as resources before import
 # . load image files too resources, because image.load will fail on exported games
 # . Remove need to call PreCache.stop
@@ -123,7 +122,7 @@ func _run_thread_cache_shaders(_arg : int) -> void:
 		self._warn_un_cacheable_sub_resource_materials(file_name)
 
 		match file_name.get_extension().to_lower():
-			"tscn", "tres", "png":
+			"tscn", "tres", "bmp", "dds", "exr", "hdr", "jpeg", "jpg", "png", "svg", "svgz", "tga", "webp":
 				var resource_type = self._get_resource_type(file_name)
 				match resource_type:
 					PackedScene, Texture, Shader, ShaderMaterial, SpatialMaterial, ParticlesMaterial, CanvasItemMaterial:
@@ -248,7 +247,7 @@ func _warn_un_cacheable_sub_resource_materials(file_name : String) -> void:
 func _get_resource_type(file_name : String) -> GDScriptNativeClass:
 	var ext := file_name.get_extension().to_lower()
 	match ext:
-		"png":
+		"bmp", "dds", "exr", "hdr", "jpeg", "jpg", "png", "svg", "svgz", "tga", "webp":
 			return Texture
 		"tscn":
 			return PackedScene
@@ -286,7 +285,7 @@ func _sort_resource_files_by_type(resource_files : Array) -> Array:
 		match file_name.get_extension().to_lower():
 			"tscn":
 				scenes.append(file_name)
-			"png":
+			"bmp", "dds", "exr", "hdr", "jpeg", "jpg", "png", "svg", "svgz", "tga", "webp":
 				images.append(file_name)
 			"tres":
 				var resource_type = self._get_resource_type(file_name)
