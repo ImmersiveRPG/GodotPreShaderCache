@@ -10,7 +10,6 @@ extends Node
 # . Make it cache jpeg Textures too
 # . Make it load images as resources before import
 # . load image files too resources, because image.load will fail on exported games
-# . remove need to .lstrip("\"").rstrip("\"")
 
 
 signal on_each(percent, file_name, thing, resource_type)
@@ -84,9 +83,9 @@ func _get_ext_resource_textures(file_name : String) -> Array:
 	for header in headers:
 		for key in header:
 			if key == "type":
-				var value = header[key].lstrip("\"").rstrip("\"")
+				var value = header[key]
 				if value == "Texture":
-					var path = header["path"].lstrip("\"").rstrip("\"")
+					var path = header["path"]
 					texture_files.append(path)
 
 	return texture_files
@@ -236,7 +235,7 @@ func _warn_un_cacheable_sub_resource_materials(file_name : String) -> void:
 	for header in headers:
 		for key in header:
 			if key == "type":
-				var value = header[key].lstrip("\"").rstrip("\"")
+				var value = header[key]
 				match value:
 					"ParticlesMaterial", "SpatialMaterial", "ShaderMaterial", "CanvasItemMaterial":
 						push_warning("ShaderCache: scene '%s' sub resource %s can't be pre cached, unless saved in own *.tres file." % [file_name, value])
@@ -253,7 +252,7 @@ func _get_resource_type(file_name : String) -> GDScriptNativeClass:
 	for header in headers:
 		for key in header:
 			if key == "type":
-				var type = header[key].lstrip("\"").rstrip("\"")
+				var type = header[key]
 				match type:
 					"Shader": return Shader
 					"ParticlesMaterial": return ParticlesMaterial
@@ -325,7 +324,7 @@ func _parse_resource_file_section_headers(file_name : String, section_name : Str
 			var header := {}
 			for entry in entries:
 				var pair = entry.split("=")
-				header[pair[0]] = pair[1]
+				header[pair[0]] = pair[1].lstrip("\"").rstrip("\"")
 				#print(pair)
 			headers.append(header)
 	#print("============================")
