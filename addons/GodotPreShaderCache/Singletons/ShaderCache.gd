@@ -130,7 +130,7 @@ func _run_thread_cache_shaders(_arg : int) -> void:
 							#self.call_deferred("emit_signal", "on_each", percent, entry.file_name, entry.thing, entry.resource_type)
 							CallThrottled.call_throttled(funcref(self, "emit_signal"), ["on_each", percent, file_name, thing, resource_type])
 						else:
-							print(["????", file_name, resource_type, thing])
+							push_error("Failed to cache: %s, %s" % [file_name, resource_type])
 					_:
 						if _is_logging: print("##### Skipping caching: ", file_name)
 
@@ -167,6 +167,7 @@ func _cache_resource_material(file_name : String, resource_type : GDScriptNative
 	match resource_type:
 		PackedScene:
 			_cache.append(res)
+			return res
 		Texture:
 			var image_texture := ImageTexture.new()
 			image_texture.create_from_image(res)
