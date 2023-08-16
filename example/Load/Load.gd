@@ -1,6 +1,6 @@
 # Copyright (c) 2022-2023 Matthew Brennan Jones <matthew.brennan.jones@gmail.com>
 # This file is licensed under the MIT License
-# https://github.com/ImmersiveRPG/GodotPreShaderCache
+# https://github.com/ImmersiveRPG/GodotPreCache
 
 extends Spatial
 
@@ -17,11 +17,11 @@ func _ready() -> void:
 	CallThrottled.start(frame_budget_usec, frame_budget_threshold_usec)
 
 	yield(self.get_tree().create_timer(2), "timeout")
-	# Setup ShaderCache
+	# Setup PreCache
 	var paths_to_ignore := [
 		"res:///addons/"
 	]
-	ShaderCache.start(self, "_on_each", "_on_done", paths_to_ignore)
+	PreCache.start(self, "_on_each", "_on_done", paths_to_ignore)
 
 func _process(delta : float) -> void:
 	# Rotate each cube
@@ -82,7 +82,7 @@ func _on_done() -> void:
 	_progress_bar.value = 100.0
 
 	yield(self.get_tree().create_timer(4), "timeout")
-	ShaderCache.stop(self, "_on_each", "_on_done")
+	PreCache.stop(self, "_on_each", "_on_done")
 
 	var err := self.get_tree().change_scene("res://example/Start/Start.tscn")
 	assert(err == OK)

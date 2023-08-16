@@ -10,18 +10,18 @@ config_version=4
 
 [application]
 
-config/name="Godot Pre Shader Cache"
+config/name="Godot Pre Cache"
 run/main_scene="res://example/Load/Load.tscn"
 config/icon="res://icon.png"
 
 [autoload]
 
 CallThrottled="*res://addons/GodotCallThrottled/Singletons/CallThrottled.gd"
-ShaderCache="*res://addons/GodotPreShaderCache/Singletons/ShaderCache.gd"
+PreCache="*res://addons/GodotPreCache/Singletons/PreCache.gd"
 
 [editor_plugins]
 
-enabled=PoolStringArray( "res://addons/GodotCallThrottled/plugin.cfg", "res://addons/GodotPreShaderCache/plugin.cfg" )
+enabled=PoolStringArray( "res://addons/GodotCallThrottled/plugin.cfg", "res://addons/GodotPreCache/plugin.cfg" )
 
 [gui]
 

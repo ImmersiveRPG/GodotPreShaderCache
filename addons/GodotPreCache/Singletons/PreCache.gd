@@ -1,11 +1,10 @@
 # Copyright (c) 2022-2023 Matthew Brennan Jones <matthew.brennan.jones@gmail.com>
 # This file is licensed under the MIT License
-# https://github.com/ImmersiveRPG/GodotPreShaderCache
+# https://github.com/ImmersiveRPG/GodotPreCache
 
 extends Node
 
 # TODO:
-# . Rename to PreCache
 # . Add an enum so we can control what to cache: enum ToCache {All, TextScenes, Images, Textures, Shaders, Materials, }
 # . Make it cache jpeg Textures too
 # . Make it load images as resources before import
@@ -238,7 +237,7 @@ func _warn_un_cacheable_sub_resource_materials(file_name : String) -> void:
 				var value = header[key]
 				match value:
 					"ParticlesMaterial", "SpatialMaterial", "ShaderMaterial", "CanvasItemMaterial":
-						push_warning("ShaderCache: scene '%s' sub resource %s can't be pre cached, unless saved in own *.tres file." % [file_name, value])
+						push_warning("PreCache: scene '%s' sub resource %s can't be pre cached, unless saved in own *.tres file." % [file_name, value])
 
 func _get_resource_type(file_name : String) -> GDScriptNativeClass:
 	var ext := file_name.get_extension().to_lower()

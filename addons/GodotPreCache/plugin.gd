@@ -1,13 +1,13 @@
 # Copyright (c) 2022-2023 Matthew Brennan Jones <matthew.brennan.jones@gmail.com>
 # This file is licensed under the MIT License
-# https://github.com/ImmersiveRPG/GodotPreShaderCache
+# https://github.com/ImmersiveRPG/GodotPreCache
 
 tool
 extends EditorPlugin
 
 # Get the name and paths of all the autoloads
 const autoloads := [
-	{"name": "ShaderCache", "path": "res://addons/GodotPreShaderCache/Singletons/ShaderCache.gd"},
+	{"name": "PreCache", "path": "res://addons/GodotPreCache/Singletons/PreCache.gd"},
 ]
 
 func _enter_tree() -> void:
@@ -17,7 +17,7 @@ func _enter_tree() -> void:
 		if not ProjectSettings.has_setting("autoload/%s" % [entry.name]):
 			self.add_autoload_singleton(entry.name, entry.path)
 
-	print("Installed plugin Godot Pre Shader Cache")
+	print("Installed plugin Godot Pre Cache")
 
 func _exit_tree() -> void:
 	# Uninstall all the autoloads
@@ -28,4 +28,4 @@ func _exit_tree() -> void:
 		if ProjectSettings.has_setting("autoload/%s" % [entry.name]):
 			self.remove_autoload_singleton(entry.name)
 
-	print("Uninstalled plugin Godot Pre Shader Cache")
+	print("Uninstalled plugin Godot Pre Cache")
