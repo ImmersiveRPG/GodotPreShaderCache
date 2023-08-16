@@ -14,7 +14,7 @@ extends Node
 # . remove need to .lstrip("\"").rstrip("\"")
 
 
-signal on_each(percent, file_name, geometry_instance, resource_type)
+signal on_each(percent, file_name, thing, resource_type)
 signal on_done()
 
 var _is_running_mutex := Mutex.new()

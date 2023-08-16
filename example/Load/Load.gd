@@ -29,29 +29,29 @@ func _process(delta : float) -> void:
 		if child is MeshInstance:
 			child.rotation.x += delta * deg2rad(60.0)
 
-func _on_each(percent : float, file_name : String, node : Object, resource_type : GDScriptNativeClass) -> void:
+func _on_each(percent : float, file_name : String, thing : Object, resource_type : GDScriptNativeClass) -> void:
 	# Add the node to the scene
 	#var start := OS.get_ticks_usec()
-	if node is ImageTexture:
-		var image_texture = node
+	if thing is ImageTexture:
+		var image_texture = thing
 		var sprite3d := Sprite3D.new()
 		sprite3d.texture = image_texture
-		node = sprite3d
+		thing = sprite3d
 
 	#print("!! _on_each: %s" % [OS.get_ticks_usec() - start])
 	# Add the node to the scene if it has a position or transform
 	var is_add_child := false
-	if "position" in node:
+	if "position" in thing:
 		var pos = $Camera.unproject_position(_offset)
-		node.position = Vector2(pos.x, pos.y)
+		thing.position = Vector2(pos.x, pos.y)
 		is_add_child = true
-	elif "transform" in node:
-		node.transform.origin = _offset
+	elif "transform" in thing:
+		thing.transform.origin = _offset
 		is_add_child = true
 
 	# Update the offset for the next node
 	if is_add_child:
-		self.add_child(node)
+		self.add_child(thing)
 
 		var size := 0.4
 		_offset.x += size * 2.0
