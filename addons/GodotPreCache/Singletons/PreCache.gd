@@ -9,6 +9,10 @@ extends Node
 # . Make it cache jpeg Textures too
 # . Make it load images as resources before import
 # . load image files too resources, because image.load will fail on exported games
+# . Remove need to call PreCache.stop
+# . Change to use viewport
+# . Replace mutexes with synchronized?
+# . Large particles sometimes cover other blocks
 
 signal on_each(percent, file_name, thing, resource_type)
 signal on_done()
